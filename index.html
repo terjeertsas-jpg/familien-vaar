@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline' https://unpkg.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://unpkg.com; worker-src blob: 'self'; frame-src 'none'; object-src 'none'; base-uri 'self';"/>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="theme-color" content="#5c3a36"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="familien vår"/>
+<title>familien vår</title>
+<link rel="manifest" href="manifest.json"/>
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#f1e6db;
+  --bg2:#ebe0d4;
+  --card:#fffaf5;
+  --card2:#fffdf9;
+  --ink:#2a1f1c;
+  --muted:#7a675f;
+  --rose:#7a3e45;
+  --rose-soft:#f3e2dc;
+  --line:rgba(42,31,28,.08);
+  --line-strong:rgba(42,31,28,.12);
+  --shadow:0 1px 0 rgba(42,31,28,.03),0 10px 28px rgba(42,31,28,.06);
+  --shadow-lg:0 2px 0 rgba(42,31,28,.03),0 18px 44px rgba(42,31,28,.08);
+  --radius:20px;
+  --radius-sm:14px;
+  --space-1:6px;
+  --space-2:10px;
+  --space-3:14px;
+  --space-4:18px;
+  --space-5:24px;
+  --space-6:32px;
+  --max:700px;
+  --tap:44px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  min-height:100dvh;
+  padding-bottom:calc(88px + env(safe-area-inset-bottom));
+  color:var(--ink);
+  font-family:"Source Sans 3",system-ui,sans-serif;
+  font-size:16.5px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  background:
+    radial-gradient(1100px 480px at 8% -8%,#f7ebe3 0%,transparent 55%),
+    radial-gradient(900px 420px at 100% 0%,#e8d5c6 0%,transparent 48%),
+    linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);
+}
+button,input,select,textarea{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button,.tabbar button{cursor:pointer}
+a{color:var(--rose);text-decoration-thickness:1px;text-underline-offset:2px}
+.wrap{max-width:var(--max);margin:0 auto;padding:var(--space-5) 20px var(--space-6)}
+header.app{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-4)}
+.brand{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--rose);font-weight:600}
+.weekbig{font-family:Fraunces,Georgia,serif;font-size:clamp(32px,8.5vw,44px);font-weight:500;margin:8px 0 6px;line-height:1.1;letter-spacing:-.025em}
+.sub{color:var(--muted);font-size:15px;line-height:1.45}
+.pills{display:flex;gap:8px;flex-wrap:wrap}
+.pill{
+  background:rgba(255,250,245,.85);
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:8px 14px;
+  font-size:13px;
+  color:var(--muted);
+  font-weight:500;
+  transition:background .15s ease,color .15s ease,border-color .15s ease;
+}
+button.pill{cursor:pointer}
+.card{
+  background:linear-gradient(180deg,var(--card2),var(--card));
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:var(--space-4) var(--space-4) var(--space-3);
+  margin:0 0 var(--space-3);
+  box-shadow:var(--shadow);
+}
+.card h3{
+  font-family:Fraunces,Georgia,serif;
+  font-weight:500;
+  margin:0 0 10px;
+  font-size:19px;
+  letter-spacing:-.01em;
+  line-height:1.25;
+}
+.card p{margin:0 0 12px;line-height:1.55}
+.card p:last-child{margin-bottom:0}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch}
+.grid2>.stat,.grid2>.card{min-width:0;height:100%;margin:0}
+.eq{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;align-items:stretch}
+.eq>.card{margin:0;height:100%}
+nav.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:40;
+  background:rgba(255,250,245,.92);
+  backdrop-filter:blur(18px) saturate(1.2);
+  -webkit-backdrop-filter:blur(18px) saturate(1.2);
+  border-top:1px solid var(--line);
+  display:grid;grid-template-columns:repeat(7,1fr);
+  padding:8px 6px calc(8px + env(safe-area-inset-bottom));
+  box-shadow:0 -8px 28px rgba(42,31,28,.04);
+}
+nav.tabbar button{
+  background:0;border:0;color:#9a837a;
+  min-height:var(--tap);
+  padding:4px 2px;
+  font-size:10px;letter-spacing:.03em;text-transform:uppercase;font-weight:600;
+  border-radius:12px;
+  transition:color .15s ease;
+}
+nav.tabbar button.on{color:var(--rose)}
+.icon{
+  display:grid;place-items:center;
+  width:30px;height:30px;margin:0 auto 2px;
+  border-radius:10px;font-size:14px;
+  transition:background .15s ease;
+}
+nav.tabbar button.on .icon{background:var(--rose-soft);box-shadow:inset 0 0 0 1px rgba(122,62,69,.12)}
+.btn,.btn2{
+  border:0;border-radius:999px;
+  padding:12px 18px;cursor:pointer;
+  font-weight:600;font-size:14px;
+  min-height:44px;
+  transition:transform .12s ease,opacity .12s ease,background .15s ease;
+}
+.btn:active,.btn2:active{transform:scale(.98)}
+.btn{background:var(--rose);color:#fffaf4;box-shadow:0 1px 0 rgba(42,31,28,.06)}
+.btn2{background:#efe2d6;color:var(--ink)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+label{display:block;font-size:12px;color:var(--muted);margin:14px 0 6px;letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+input,select,textarea{
+  width:100%;
+  border:1px solid var(--line-strong);
+  background:#fff;
+  border-radius:var(--radius-sm);
+  padding:12px 14px;
+  line-height:1.4;
+}
+input:focus,select:focus,textarea:focus{
+  outline:none;
+  border-color:rgba(122,62,69,.35);
+  box-shadow:0 0 0 3px rgba(122,62,69,.12);
+}
+input[type=checkbox],input[type=radio]{
+  width:auto;min-width:20px;height:20px;margin:2px 0 0;flex-shrink:0;
+  accent-color:var(--rose,#c4785a);
+}
+ul.clean li span,.chk span{
+  flex:1;min-width:0;
+  text-transform:none;letter-spacing:0;font-weight:400;
+  color:inherit;font-size:15px;line-height:1.5;
+}
+.chk,label:has(>input[type=checkbox]){
+  display:flex;align-items:flex-start;gap:12px;
+  margin:12px 0;
+  text-transform:none;letter-spacing:0;font-weight:400;
+  font-size:15px;color:inherit;
+}
+textarea{min-height:100px;resize:vertical}
+ul.clean{list-style:none;padding:0;margin:0}
+ul.clean li{
+  display:flex;gap:12px;align-items:flex-start;
+  padding:12px 0;
+  border-bottom:1px solid var(--line);
+}
+ul.clean li:last-child{border-bottom:0}
+.moods{display:flex;gap:8px;font-size:24px;flex-wrap:wrap}
+.moods button{background:#f4e8dc;border:0;border-radius:16px;padding:10px 12px;min-height:44px;min-width:44px;cursor:pointer}
+.moods button.on{background:var(--rose-soft);box-shadow:inset 0 0 0 1.5px var(--rose)}
+.tiny{font-size:13px;color:var(--muted);line-height:1.5}
+.stat{
+  padding:var(--space-3) var(--space-4);
+  background:rgba(255,250,245,.7);
+  border:1px solid var(--line);
+  border-radius:18px;
+  box-shadow:0 1px 0 rgba(42,31,28,.02);
+}
+.stat b{display:block;font-family:Fraunces,Georgia,serif;font-size:26px;font-weight:500;letter-spacing:-.02em;margin-bottom:2px}
+.warn{font-size:13px;color:var(--muted);line-height:1.5;margin:var(--space-3) 0 0}
+.kick{font-family:Fraunces,Georgia,serif;font-size:56px;text-align:center;font-weight:500;letter-spacing:-.03em}
+.hidden{display:none!important}
+.hero-warm{
+  margin:0 0 var(--space-3);
+  padding:14px 16px;
+  border-radius:16px;
+  background:linear-gradient(135deg,rgba(243,226,220,.9),rgba(255,250,245,.95));
+  border:1px solid rgba(122,62,69,.1);
+  color:var(--ink);
+  font-size:15px;
+  line-height:1.5;
+}
+.setup-lead{margin:0 0 var(--space-2);color:var(--muted);font-size:15px;line-height:1.5}
+@media print{
+  nav.tabbar,nav{display:none!important}
+  body{padding:0;background:#fff}
+  .wrap{max-width:none}
+  .card{break-inside:avoid;box-shadow:none}
+}
+
+/* Netlify HUD / badge can steal all taps in iOS standalone PWA */
+@media all{
+  #nf-hud, #netlify-hud, netlify-hud, [data-nf-variant],
+  iframe[src*="netlify/scripts/hud"], iframe[src*="netlify.new"],
+  iframe[src*="app.netlify.com/hud"], div[id^="nf-"]{
+    display:none!important;visibility:hidden!important;
+    pointer-events:none!important;width:0!important;height:0!important;
+    opacity:0!important;max-width:0!important;max-height:0!important;
+  }
+}
+
+.micro-k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--muted);margin:12px 0 4px}
+.micro-k:first-of-type{margin-top:0}
+
+.mem-thumb{
+  width:64px;height:64px;object-fit:cover;border-radius:12px;
+  background:var(--rose-soft);cursor:pointer;flex-shrink:0;
+  border:1px solid var(--line);
+}
+.mem-thumb.placeholder{display:grid;place-items:center;font-size:22px;color:var(--muted)}
+.kind-badge{
+  display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;
+  background:var(--rose-soft);color:var(--rose);border:1px solid rgba(122,62,69,.14);
+}
+.photo-modal{
+  position:fixed;inset:0;z-index:80;background:rgba(42,31,28,.82);
+  display:flex;align-items:center;justify-content:center;padding:20px;cursor:pointer;
+}
+.photo-modal img{max-width:min(960px,100%);max-height:90vh;border-radius:16px;box-shadow:var(--shadow-lg);cursor:default}
+.mem-row{display:flex;gap:12px;align-items:flex-start}
+.mem-row .mem-body{flex:1;min-width:0}
+</style>
+</head>
+<body>
+<script>
+(function(){
+  function zapNetlifyHud(){
+    var sel='#nf-hud,#netlify-hud,netlify-hud,[data-nf-variant],[data-netlify-hud],iframe[src*="hud"],iframe[src*="netlify.new"],iframe[src*="app.netlify.com"],script[src*="netlify/scripts/hud"]';
+    document.querySelectorAll(sel).forEach(function(n){
+      try{
+        if(n.tagName==='SCRIPT'){n.type='text/plain';n.removeAttribute('src'); n.remove();}
+        else {n.remove();}
+      }catch(e){}
+    });
+    var body=document.body; if(!body) return;
+    Array.prototype.forEach.call(body.children,function(el){
+      if(!el||el.id==='app'||(el.classList&&(el.classList.contains('tabbar')||el.classList.contains('wrap')))||el.tagName==='SCRIPT'||el.tagName==='STYLE'||el.tagName==='NAV')return;
+      try{
+        var st=window.getComputedStyle(el);
+        if(st.position!=='fixed'&&st.position!=='sticky')return;
+        var zi=parseInt(st.zIndex||'0',10);
+        var r=el.getBoundingClientRect();
+        var covers=(r.width>=window.innerWidth*0.5 && r.height>=window.innerHeight*0.3) || zi>=999;
+        if(covers){el.style.setProperty('pointer-events','none','important'); el.style.setProperty('display','none','important');}
+      }catch(e){}
+    });
+  }
+  zapNetlifyHud();
+  document.addEventListener('DOMContentLoaded',zapNetlifyHud);
+  setTimeout(zapNetlifyHud,0);
+  setTimeout(zapNetlifyHud,500);
+  setTimeout(zapNetlifyHud,2000);
+  try{
+    new MutationObserver(zapNetlifyHud).observe(document.documentElement,{childList:true,subtree:true});
+  }catch(e){}
+})();
+</script>
+
+<div class="wrap" id="app"></div>
+<nav class="tabbar">
+<button data-tab="hjem" class="on"><span class="icon">⌂</span>Hjem</button>
+<button data-tab="uke"><span class="icon">◎</span>Uke</button>
+<button data-tab="kunnskap"><span class="icon">ⓘ</span>Kunnskap</button>
+<button data-tab="plan"><span class="icon">▣</span>Plan</button>
+<button data-tab="logg"><span class="icon">✎</span>Logg</button>
+<button data-tab="lister"><span class="icon">✓</span>Lister</button>
+<button data-tab="mer"><span class="icon">···</span>Mer</button>
+</nav>
+<script>
+const SIZES={4:'valmuefrø',5:'sesamfrø',6:'linse',7:'blåbær',8:'bringebær',9:'drue',10:'kumquat',11:'fiken',12:'lime',13:'sitron',14:'kiwi',15:'eple',16:'avokado',17:'pære',18:'søtpotet',19:'mango',20:'banan',21:'gulrot',22:'maiskolbe',23:'grapefrukt',24:'mais',25:'blomkålhode',26:'salathode',27:'brokkoli',28:'aubergine',29:'butternutgresskar',30:'kålhode',31:'kokosnøtt',32:'kinakål',33:'ananas',34:'melon',35:'honningmelon',36:'romansalat',37:'vintermelon',38:'vannmelon',39:'vannmelon',40:'gresskar',41:'gresskar',42:'gresskar'};
+const SIZE_ET=new Set(["valmuefrø","sesamfrø","blåbær","bringebær","eple","blomkålhode","salathode","kålhode","gresskar"]);
+function sizePhrase(w){
+  const s=SIZES[w];
+  if(!s) return "Størrelse ukjent ennå";
+  const art=SIZE_ET.has(s)?"et":"en";
+  return "Størrelse: omtrent som "+art+" "+s;
+}
+
+const WEEKS={
+4:{baby:'Befruktning har skjedd, og cellene deler seg raskt. Du merker ofte ingenting ennå, og det er helt vanlig.',vanlig:'Mange har ingen symptomer. Noen kjenner bare en anelse av ømme bryster. En graviditetstest kan fortsatt være negativ så tidlig.',forvent:'Mensen kan utebli. Hvis du ikke allerede tar folat, er det lurt å starte med 400 mikrogram daglig nå.',humor:'Usikkerhet hører til denne fasen. Det er greit å vente med store konklusjoner til testen og de neste ukene gir mer klarhet.',partner:'Kjøp folat i kveld, og hold kalenderen myk uten å spekulere høyt om hva som skjer.',kjop:'Kjøp folat. Babyutstyr kan vente — det løser ingen problemer nå.',kurs:'Ingen kurs haster ennå. Ro og informasjon holder i denne fasen.',bok:'Ingenting haster å lese. Når nysgjerrigheten kommer, er Helsenorge et godt sted å starte.'},
+5:{baby:'Hjerterøret begynner å slå, og embryoet er fortsatt bittelite. Nevralrøret er i arbeid, og det er en av grunnene til at folat er viktig nå.',vanlig:'Ømme bryster, tretthet og mer sensitiv lukt er vanlig. Noen merker ingenting i det hele tatt, og begge deler er helt innenfor.',forvent:'Kvalme kan starte de neste ukene. Du kan booke første time hos fastlege eller jordmor når det passer.',humor:'Humøret kan svinge uten at du «burde være lykkelig». Hormonene jobber hardt, og det merkes.',partner:'Ta over kveldsoppvasken uten kommentar, og tilby å bli med på første time hvis hun vil ha deg der.',kjop:'Fortsett med folat, og vurder en multi med D-vitamin. Løse topper er mer nyttig enn babyklær nå.',kurs:'Les Helsenorges sider om kosthold i ro. Det slår et tilfeldig forum.',bok:'En kort innføring i norsk svangerskapsomsorg — ni kontroller og tilbud om to ultralyd — gir oversikt uten stress.'},
+6:{baby:'Hode, kropp og hjerteanlegg formes nå. Arm- og beinknopper begynner å komme til syne.',vanlig:'Kvalme, tretthet, hyppig vannlating og økt spytt er vanlig hos mange. Noen slipper unna med lite, og det er også vanlig.',forvent:'Matlukt kan bli vanskelig. Små og hyppige måltider hjelper ofte mer enn store tallerkener.',humor:'Irritasjon og tårer uten «grunn» er biologi, ikke en karakterbrist. Det går an å være snill med seg selv i denne perioden.',partner:'Handle inn nøytral mat hun tåler i kveld, og unngå å spørre om hun har «prøvd ingefær» flere ganger.',kjop:'Kjeks og en vannflaske er praktisk. Mattilsynet fraråder ingefærshots og ingefærtilskudd — hold deg unna dem.',kurs:'Begynn å tenke på fødselsforberedende kurs og spedbarns førstehjelp, men du trenger ikke melde deg på ennå.',bok:'Velg én jordmor-bok og én ærlig barselbok når du er klar. To bøker er nok.'},
+7:{baby:'Hjerne og ansikt utvikles raskt. Navlestrengen transporterer næring, og mye skjer på kort tid.',vanlig:'Kvalmen er på topp for mange nå. Metallsmak og å være trøtt allerede klokken 20 er vanlig.',forvent:'Si ifra på jobb når du vil. Du har rett til fri med lønn til kontroll når det ikke kan time utenom arbeidstid.',humor:'Skyldfølelse for å være «dårlig gravid» er vanlig — og unyttig. Kroppen din gjør allerede en stor jobb.',partner:'Kutt sosiale planer hun ikke orker i kveld, og gjør det uten å gjøre det til en diskusjon.',kjop:'Kjøp det som løser et problem dere har nå. Se listen under Lister for konkrete forslag.',kurs:'Fødselsforberedende og spedbarns førstehjelp kan planlegges, men tidspunktet er mer aktuelt senere.',bok:'Én jordmor-bok og én ærlig barselbok er fortsatt nok. Les når energien er der.'},
+8:{baby:'Ansiktstrekk blir tydeligere, og fingre og tær skilles. Bevegelse starter, men du kjenner det vanligvis ikke ennå.',vanlig:'Kvalme, BH som strammer og mer utflod er vanlig i denne uken.',forvent:'På første kontroll måles blodtrykk, urin og blodprøver, ofte med ferritin. Ta gjerne med spørsmålene dine skriftlig.',humor:'Angst for abort er vanlig i første trimester. Del den med noen du stoler på, i stedet for å google alene klokken to om natten.',partner:'Bli med på første time hvis hun vil, og skriv ned det jordmor eller legen sier.',kjop:'En mappe til papirer er nyttig. Barnevogn kan vente lenge ennå.',kurs:'Fødselsforberedende og spedbarns førstehjelp står fortsatt på lista for senere.',bok:'Én jordmor-bok og én ærlig barselbok holder. Ikke fyll hylla for tidlig.'},
+9:{baby:'Organene er på plass som anlegg og skal modnes videre. Den embryonale «halen» er borte.',vanlig:'Trettheten kan være tung. Noen får hodepine — drikk vann, men kontakt helsevesenet ved sterk, plutselig hodepine.',forvent:'Klær i livet kan bli trange uten at magen synes særlig ennå. Det er en vanlig overraskelse.',humor:'Du kan være glad og redd i samme time. Begge følelsene får plass.',partner:'Lag en middag i kveld som hun faktisk får ned, uten å kommentere porsjonsstørrelsen.',kjop:'Kjøp det som løser et problem nå. Se Lister når dere er usikre på hva som faktisk trengs.',kurs:'Fødselsforberedende og spedbarns førstehjelp kan ventes med til senere i svangerskapet.',bok:'Én jordmor-bok og én ærlig barselbok er fortsatt et godt utgangspunkt.'},
+10:{baby:'Embryoet kalles nå foster. De viktigste organene er anlagt og skal vokse og modnes videre.',vanlig:'Kvalme kan fortsatt styre dagen. Noen får mer energi i korte glimt, mens andre fortsatt er svært trøtte.',forvent:'Tenk gjennom hvem som skal få vite om graviditeten, og når. Det er lov å vente.',humor:'Å sammenligne deg med andres «strålende første trimester» ødelegger mer enn det hjelper. Din kropp har sitt eget tempo.',partner:'Ikke publiser noe om graviditeten uten at hun har sagt klart ja først.',kjop:'Kjøp det som løser et problem dere har nå. Store babykjøp kan vente.',kurs:'Fødselsforberedende og spedbarns førstehjelp kommer nærmere, men haster ikke denne uken.',bok:'Én jordmor-bok og én ærlig barselbok er nok. Les kapittelvis når spørsmål dukker opp.'},
+11:{baby:'Fosteret strekker og bøyer seg. Ansiktet blir mer menneskelig uke for uke.',vanlig:'Blodvolumet øker. Tannkjøttet kan blø lettere når du pusser tennene, og det er vanlig.',forvent:'Helsenorge har intervaller for vektøkning ut fra KMI. Målet er ikke å slanke seg, og heller ikke å «spise for to».',humor:'Kroppsendring uten synlig «babylook» kan føles merkelig. Du er ikke alene om den følelsen.',partner:'Gi et kompliment som handler om utholdenhet i kveld — ikke om mage eller utseende.',kjop:'Ny BH er en god investering hvis bøylene graver. Det gjør hverdagen mer behagelig med en gang.',kurs:'Fødselsforberedende og spedbarns førstehjelp kan planlegges når energien tillater det.',bok:'Én jordmor-bok og én ærlig barselbok holder fortsatt.'},
+12:{baby:'De fleste organer er anlagt og vokser videre. Risikoen for tidlig tap synker for mange, men ingen kan love garanti.',vanlig:'Kvalmen letter ofte rundt her, men ikke alltid. Energi kan komme tilbake i små doser.',forvent:'Folattilskudd anbefales til og med uke 12. Deretter er mat og eventuelt multi etter jordmors råd det vanlige.',humor:'Lettelse og antiklimaks kan komme samtidig. Begge deler er lovlige reaksjoner.',partner:'Feire stille hvis hun vil — ikke ballonger eller stor stand hvis hun ikke har bedt om det.',kjop:'Barnevogn trengs ikke ennå. Spar plassen og pengene til dere kjenner behovet bedre.',kurs:'Se kommunens fødselsforberedende kurs nå — plassene fylles ofte tidlig.',bok:'Én jordmor-bok og én ærlig barselbok er fortsatt et godt valg.'},
+13:{baby:'Andre trimester starter. Skjelettet forbeines gradvis, og fosteret fortsetter å vokse jevnt.',vanlig:'Magen kan begynne å synes. Libido kan endre seg begge veier, og begge deler er vanlig.',forvent:'Løse klær blir mer aktuelle. Fortell familie hvis det er planen deres nå.',humor:'Presset om å være «endelig glad» er sludder. Humøret svinger fortsatt, og det er greit.',partner:'Ta bilder bare hvis hun ber om det — ikke fordi bestemor har spurt.',kjop:'Løse bukser eller én god gravidbukse slår fem «morsomme» t-skjorter.',kurs:'Fødselsforberedende og spedbarns førstehjelp bør på meldingslista snart hvis dere ikke allerede har sjekket.',bok:'Én jordmor-bok og én ærlig barselbok er fortsatt nok.'},
+14:{baby:'Ansiktet har mimikk, og tynne hårstrå (lanugo) kan komme. Utviklingen fortsetter i rolig tempo.',vanlig:'Økt utflod, tett nese og mer spytt er vanlig hos noen i denne fasen.',forvent:'Ryggen kan begynne å kjennes. Sko med høy hæl er sjelden en god idé nå.',humor:'Du kan savne den gamle kroppen og like den nye samtidig. Det er ikke en motsetning.',partner:'Gi en ryggmassasje i kveld uten å «fikse» holdningen hennes underveis.',kjop:'Kjøp det som løser et problem nå. Se Lister for konkrete forslag til denne fasen.',kurs:'Fødselsforberedende og spedbarns førstehjelp er gode å ha på kalenderen.',bok:'Én jordmor-bok og én ærlig barselbok holder. Les det som føles relevant nå.'},
+15:{baby:'Ørene nærmer seg sin plass, og beinmargen utvikles. Fosteret blir mer komplett uke for uke.',vanlig:'Appetitten kan øke. Halsbrann kan starte tidlig hos noen, også før magen er stor.',forvent:'Små, hyppige måltider hjelper ofte. Unngå å ligge flatt rett etter mat hvis halsbrannen er plagsom.',humor:'Matlyst og kvalme kan bytte på time for time. Kroppen er ikke alltid konsekvent.',partner:'Ha surt, salt og nøytralt i huset i kveld — og kommenter ikke porsjonene.',kjop:'Kjøp det som løser et problem dere har nå. Store innkjøp kan fortsatt vente.',kurs:'Fødselsforberedende og spedbarns førstehjelp bør snart påmeldingsvurderes.',bok:'Én jordmor-bok og én ærlig barselbok er fortsatt et godt utgangspunkt.'},
+16:{baby:'Noen kjenner tidlige spark, særlig hvis de har vært gravide før. Førstegangsfødende kjenner ofte bevegelse senere.',vanlig:'Livet blir rundere. Bekkenet kan gi småsting, og det er vanlig uten at det betyr alarm.',forvent:'Venstre sideleie hjelper ofte søvnen. En pute mellom knærne kan gjøre en merkbar forskjell.',humor:'Uvirkelig-følelse er vanlig til sparkene kommer. Det er greit å vente på beviset kroppen gir.',partner:'Legg hånden på magen når hun sier det er aktivitet — ikke krev et show.',kjop:'En gravidpute er verdt det hvis søvnen faktisk er ødelagt. Ellers kan den vente.',kurs:'Fødselsforberedende og spedbarns førstehjelp: sjekk ledige plasser i kommunen.',bok:'Én jordmor-bok og én ærlig barselbok holder fortsatt.'},
+17:{baby:'Fettlag starter å bygges, og skjelettet blir sterkere. Fosteret fortsetter å øve på bevegelse.',vanlig:'Strekkmerker kan komme. De handler om arv og tøying — ikke om moral eller innsats.',forvent:'Hudpleie er komfort. Den gir ingen garanti mot strekkmerker, men kan føles godt.',humor:'Speilet kan bli en fiende noen dager. Det er tillatt å ikke elske hvert bilde.',partner:'Ikke si «du er jo nesten ikke gravid» i kveld — det treffer sjelden godt.',kjop:'Kjøp det som løser et problem nå. Se Lister for forslag som faktisk er nyttige.',kurs:'Fødselsforberedende og spedbarns førstehjelp bør være påmeldt snart hvis plassene fylles.',bok:'Én jordmor-bok og én ærlig barselbok er fortsatt nok.'},
+18:{baby:'Offentlig ultralyd-tilbud ligger typisk her. Man ser blant annet på hjerte, lemmer, morkake og fostervann.',vanlig:'Spark blir tydeligere for mange. Ryggplager er også vanlig i denne perioden.',forvent:'Ta gjerne med partner. Be om bilder eller notater, og husk at én ultralyd ikke er all diagnostikk i verden.',humor:'Kjønnsgjetting og navnepress fra familie kan dempes med en tydelig grense. Dere bestemmer tempoet.',partner:'Kjør til ultralyden, husk spørsmålene, og si lite i rommet hvis hun vil styre samtalen.',kjop:'Kjøp det som løser et problem nå. Unngå impulskjøp rett etter ultralyden.',kurs:'Fødselsforberedende og spedbarns førstehjelp er aktuelle å booke rundt nå.',bok:'Én jordmor-bok og én ærlig barselbok holder. Ultralydbilder er minner, ikke lærebøker.'},
+19:{baby:'Sansene utvikles videre. Fosteret svelger fostervann — det er trening, ikke tørst.',vanlig:'Kramper i legger om natten er vanlig. Strekk forsiktig og drikk væske; si fra hvis det blir svært plagsomt.',forvent:'Hvis ferritin-svar anbefalte jerntilskudd fra uke 18–20, start etter jordmors tall — ikke på egen magefølelse.',humor:'Uro for at «noe er galt» mellom kontroller er vanlig. Det er greit å si det høyt.',partner:'Gå en tur sammen i kveld — som luft, ikke som treningsprogram.',kjop:'Jerntilskudd bare etter avtale med jordmor eller lege. Ikke start på sjangs.',kurs:'Fødselsforberedende og spedbarns førstehjelp bør være booket eller snart bookes.',bok:'Én jordmor-bok og én ærlig barselbok er fortsatt et godt valg.'},
+20:{baby:'Dere er halvveis. Fosteret er omtrent 25 centimeter, og bevegelsene får mer mønster.',vanlig:'Navlen kan flattere. Halsbrann og bekkenplager er vanlig hos mange rundt nå.',forvent:'Lær barnets våkenperioder. Senere i svangerskapet betyr «mindre liv» at dere kontakter fødeavdelingen — ikke at dere venter på appen.',humor:'Halvveis kan føles både langt og kort samtidig. Begge følelsene er vanlige.',partner:'Bli med på kontroll hvis hun vil, og skriv ned vekt og blodtrykk hvis hun ønsker logg.',kjop:'Start sykehussekk-listen på papir. Du trenger ikke fylle sekken ennå.',kurs:'Meld dere på fødselsforberedende kurs nå hvis dere ikke allerede har gjort det.',bok:'En jordmor-bok om fødselsfaser er nyttig lesning i tiden som kommer.'},
+21:{baby:'Øyenbryn utvikles, og bevegelsene blir mer koordinerte. Fosteret øver stadig mer.',vanlig:'Søvn kommer ofte i biter. Puter som en festning er et vanlig syn i sengen.',forvent:'Permisjon: 49 uker med 100 prosent eller 59 uker med 80 prosent. Valget gjelder begge og låses når uttaket starter.',humor:'Irritasjon på partner for småting er vanlig. Si den konkrete tingen — ikke hele karakteren.',partner:'Åpne NAV-sidene sammen i kveld. Ikke si at dere fikser det «senere».',kjop:'Kjøp det som løser et problem nå. Store babykjøp kan fortsatt vente.',kurs:'Fødselsforberedende og spedbarns førstehjelp bør være på kalenderen.',bok:'Én jordmor-bok og én ærlig barselbok holder. NAV-sidene er «boken» for pengene.'},
+22:{baby:'Lungene utvikler luftveier. Overlevelse ved svært tidlig fødsel er sykehusstoff — ikke noe appen skal spekulere i.',vanlig:'Hevelse i beina mot kveld er vanlig; løft dem når du kan. Plutselig hevelse i ansikt eller hender sammen med hodepine: ring helsevesenet.',forvent:'Sko kan bli trange. Nye, trange skinnsko er sjelden en god idé nå.',humor:'Humøret styres mer av hormoner, søvn og kvalme enn av vilje. Logg hvordan det er — ikke døm deg selv for det.',partner:'Ta kveldsoppvask og kleskurv som standard i kveld, ikke som en heltedåd.',kjop:'Kjøp det som løser et problem nå. Se Lister for forslag som faktisk hjelper.',kurs:'Fødselsforberedende og spedbarns førstehjelp: sjekk at dere har plass.',bok:'Én jordmor-bok og én ærlig barselbok er fortsatt nok.'},
+23:{baby:'Huden er rynkete ennå, og mer fett kommer etter hvert. Fosteret fortsetter å vokse jevnt.',vanlig:'Noen merker Braxton Hicks: uregelmessige sammentrekninger som ikke øker. Ved tvil — kontakt fødeavdelingen.',forvent:'Si fra til tannlegen at du er gravid. Noen inngrep utsettes til etter fødselen.',humor:'Humøret styres mer av hormoner, søvn og dagsform enn av viljestyrke. Det er greit å bare registrere hvordan det er.',partner:'Bli med på ultralyd eller kontroll hvis det er aktuelt, og bær posene hjem.',kjop:'Kjøp det som løser et problem nå. Unngå å fylle huset «i tilfelle».',kurs:'Fødselsforberedende og spedbarns førstehjelp bør være booket snart.',bok:'Én jordmor-bok og én ærlig barselbok holder fortsatt.'},
+24:{baby:'Lungene lager etter hvert surfactant, og hørselen er mer utviklet. Fosteret reagerer mer på lyd.',vanlig:'Glukosebelastning tilbys mange rundt her. Følg jordmors opplegg — ikke dietter fra sosiale medier.',forvent:'Hvis det blir svangerskapsdiabetes, finnes behandling og oppfølging. Det er ikke skam.',humor:'Matpoliti fra omgivelsene skylder du ingen kvittering. Du og jordmor eier planen.',partner:'Gå med på matendringer uten å gjøre kjøkkenet til en eksamen i kveld.',kjop:'Kjøp det som løser et problem nå. Se Lister for konkrete forslag.',kurs:'Book spedbarns førstehjelp nå hvis dere ikke allerede har dato.',bok:'Én jordmor-bok og én ærlig barselbok er fortsatt et godt utgangspunkt.'},
+25:{baby:'Mer fett legges på, og fosteret responderer mer på lys og lyd. Utviklingen fortsetter i tempo.',vanlig:'Kortpust ved anstrengelse er vanlig. Senk tempoet litt — du trenger ikke senke alt.',forvent:'Bekkenbunn: knip daglig. Gange er bra, men erstatter ikke knipeøvelser.',humor:'Humøret svinger med søvn og kropp mer enn med «riktig innstilling». Det er greit å være ærlig om det.',partner:'Lær knipeøvelsen så du kan minne om den uten å mase — én gang i kveld er nok.',kjop:'Kjøp det som løser et problem nå. Store innkjøp kan fortsatt vente.',kurs:'Fødselsforberedende og spedbarns førstehjelp bør være på plass snart.',bok:'Én jordmor-bok og én ærlig barselbok holder.'},
+26:{baby:'Øynene kan åpne seg etter hvert. Immunstoffer fra mor overføres — en stille, viktig prosess.',vanlig:'Uro i bekkenet ved gange er vanlig. Kortere steg og eventuelt staver kan hjelpe.',forvent:'Ved sterke bekkenplager: fysio. «Hold ut» er ikke et godt råd når det går ut over hverdagen.',humor:'Humøret styres mer av kroppen enn av plakater om positivitet. Logg hvordan det er, uten å dømme.',partner:'Bær handleposene i kveld. Punktum — uten forhandling.',kjop:'Kjøp det som løser et problem nå. Se Lister for forslag.',kurs:'Fødselsforberedende og spedbarns førstehjelp: bekreft datoene deres.',bok:'Én jordmor-bok og én ærlig barselbok er fortsatt nok.'},
+27:{baby:'Hjernen vokser raskt, og fosteret får mer regelmessige søvn- og våkenrytmer.',vanlig:'Drømmer kan bli merkelige. Det henger ofte sammen med hormoner og brutt søvn.',forvent:'Siste del av andre trimester. Sjekk at ferritin-rådene dere fikk faktisk følges.',humor:'Humøret svinger med søvn og kropp. Det er lov å si at dagen var tung uten å forklare den bort.',partner:'Når hun står opp for do om natten: unngå å sukke. Det er en liten, konkret omsorg.',kjop:'Kjøp det som løser et problem nå. Barselinnkjøp nærmer seg, men haster ikke i natt.',kurs:'Fødselsforberedende og spedbarns førstehjelp bør være gjennomført eller booket.',bok:'Én jordmor-bok og én ærlig barselbok holder fortsatt.'},
+28:{baby:'Tredje trimester er i gang. Øyne, fettlag og stadig mindre plass preger utviklingen.',vanlig:'Braxton Hicks, hevelse, søvnløshet og halsbrann er vanlig hos mange nå.',forvent:'Kontrollene blir tettere. Sparkemønsteret blir viktigere å kjenne.',humor:'Utålmodighet starter tidlig for noen. Det er ikke et tegn på at noe er galt — bare at ventingen er ekte.',partner:'Øv bilveien til fødeavdelingen i kveld, sjekk at tanken er full, og rydd plass til vesken.',kjop:'To amme-BH hvis amming er planen. Bind kan vente til nærmere slutten.',kurs:'Fødselsforberedende og spedbarns førstehjelp bør være gjennomført snart.',bok:'Les om barsel: gjester, søvn og mat. Det er mer nyttig enn enda en fødselsroman.'},
+29:{baby:'Spark kan synes utenpå. Fosteret har mindre plass og bruker den aktivt.',vanlig:'Ribbeina kan få bank. Barnet har dårlig plass, og det merkes.',forvent:'Snakk om hvem som får komme etter fødselen. Hold listen kort.',humor:'Humøret svinger med søvn og tyngde. Det er greit å være lei uten å være utakknemlig.',partner:'Avtal at du er dørvakt etter fødselen. Det er en jobb — ikke en fornærmelse mot familien.',kjop:'Kjøp det som løser et problem nå. Se Lister for sykehussekk og barsel.',kurs:'Fødselsforberedende og spedbarns førstehjelp: sjekk at dere har fått det med.',bok:'Én jordmor-bok og én ærlig barselbok er fortsatt nok.'},
+30:{baby:'Hodet ligger oftere ned. Lungene øver videre på det de skal gjøre etter fødselen.',vanlig:'Bekkenløsning kan gjøre gange vondt. Tilpass aktiviteten — du trenger ikke slutte helt.',forvent:'Søk foreldrepenger i god tid. Fristen er senest fire uker før uttak.',humor:'Humøret styres mer av søvn og kropp enn av vilje. Si hvordan det er, uten å pynte på det.',partner:'Søk din egen del av permisjonen selv i kveld. Mor skal ikke være sekretær for fedrekvoten.',kjop:'Kjøp det som løser et problem nå. Bilsete og sekk nærmer seg, men kan planlegges rolig.',kurs:'Fødselsforberedende og spedbarns førstehjelp bør være bak dere snart.',bok:'Én jordmor-bok og én ærlig barselbok holder. NAV er kilden for pengene.'},
+31:{baby:'Mer underhudsfett kommer, og huden blir mindre rynkete. Fosteret ser mer «ferdig» ut.',vanlig:'Kløe på magen er vanlig. Intens kløe i håndflater eller fotsåler skal du si fra om — det kan være leverrelatert.',forvent:'Skriv fødeønsker kort og praktisk. Det trenger ikke være en roman.',humor:'Humøret svinger. Det er lov å være spent og lei i samme setning.',partner:'Les fødeønskene hennes i kveld, og vit hva som faktisk betyr noe for henne.',kjop:'Kjøp det som løser et problem nå. Se Lister før dere handler «komplett barnerom».',kurs:'Fødselsforberedende og spedbarns førstehjelp: siste sjanse for mange kursplasser.',bok:'Én jordmor-bok og én ærlig barselbok er fortsatt et godt valg.'},
+32:{baby:'Plassen er trang. Bevegelse blir mer rull enn salto, og det er forventet.',vanlig:'Søvn kommer ofte i nitti-minuttersbiter. Hyppig do om natten er vanlig.',forvent:'Lag seks til åtte middager i fryseren. Det er barsel-infrastruktur, ikke overproduksjon.',humor:'Å gråte av slitenhet er ikke en depresjonsdiagnose. Vedvarende mørke skal du likevel si til jordmor.',partner:'Frys tre lapskauser eller tilsvarende i kveld. Det slår en vag «plan» om å fikse mat senere.',kjop:'Start sykehussekken. Bodyer i størrelse 50–56 i små mengder er nok til å begynne med.',kurs:'Fødselsforberedende og spedbarns førstehjelp bør være gjennomført.',bok:'Én jordmor-bok og én ærlig barselbok holder. Åpne barselkapitlene snart.'},
+33:{baby:'Immunstoffer overføres fortsatt. Hjernefolder øker, og fosteret fortsetter å modnes.',vanlig:'Bekkenplager, hevelse og leggkramper er vanlig i denne fasen.',forvent:'Sjekk bilsete i *deres* bil. Mange oppdager at det ikke passer dagen før hjemreise.',humor:'Humøret svinger med søvn. Det er greit å være praktisk og emosjonell på samme tid.',partner:'Installer bilsetet i kveld og les manualen. Ikke si at dere fikser det «på vei hjem».',kjop:'Kjøp bilsete hvis dere skal hjem i bil. Prøv det før det haster.',kurs:'Fødselsforberedende og spedbarns førstehjelp: bekreft at dere har fått det med.',bok:'Én jordmor-bok og én ærlig barselbok er fortsatt nok.'},
+34:{baby:'Lungene nærmer seg mer moden funksjon. Fosteret er stadig mer klar for livet utenfor.',vanlig:'Utflod øker. Ved tvil om vannavgang versus vanlig utflod: ring fødeavdelingen.',forvent:'Pakk sekken ferdig nok til at dere kan dra på tjue minutter.',humor:'Humøret styres av søvn og venting. Det er lov å være spent uten å late som alt er rolig.',partner:'Lag en ferdig «dra-nå»-liste på kjøleskapet i kveld, så ingen leter etter nøkler og papirer.',kjop:'Kjøp det som mangler til sekken. Se Lister for en fornuftig sjekkliste.',kurs:'Repeter gjerne pust og stillinger fra fødselskurset — kort og rolig.',bok:'Én jordmor-bok og én ærlig barselbok holder. Les det praktiske om barsel.'},
+35:{baby:'Nyre og lever modnes videre, og fettlaget øker. Fosteret forbereder seg på livet utenfor.',vanlig:'Trykk nedad er vanlig. Å gå som en and er biomekanikk — ikke klønetehet.',forvent:'Vit hvor helsestasjonen er etter fødselen, og hvordan dere får time.',humor:'Humøret svinger. Det er greit å lengte etter slutten uten å ønske bort det som skjer nå.',partner:'Avklar hvem som passer dyr eller søsken, med navn og nummer, ferdig skrevet i kveld.',kjop:'Kjøp det som mangler til sekk og hjemkomst. Se Lister før dere handler ekstra.',kurs:'Fødselsforberedende bør være bak dere. Kort repetisjon er nok.',bok:'Én jordmor-bok og én ærlig barselbok er fortsatt et godt valg.'},
+36:{baby:'Hodet kan synke ned i bekkenet (fiksering). Mange puster lettere, men kjenner mer trykk på blæren.',vanlig:'Slimpropp kan løsne dager eller uker før start. Det er ikke det samme som at fødselen er i gang.',forvent:'Kontrollene kommer oftere. Gruppe B-streptokokker tas hos noen etter lokale rutiner — spør hvis du er usikker.',humor:'«Er det i dag?»-spørsmål fra alle fortjener ferdige, korte svar. Du skylder ingen live-oppdatering.',partner:'Du svarer familien i kveld. Hun slipper å være informasjonskanal for hele slekta.',kjop:'Sekken bør være ferdig. Ha bind hjemme til etterpå.',kurs:'Repeter pust og stillinger kort. Store kurs er vanligvis bak dere nå.',bok:'Én jordmor-bok og én ærlig barselbok holder. Hold Helsenorge for hånden ved tvil.'},
+37:{baby:'Fullbåren nærmer seg. Fra uke 37 kalles det ofte termin-nært, selv om mange venter lenger.',vanlig:'Uregelmessige rier og energi i rykk er vanlig. Hverdagen kan føles som venting.',forvent:'Tegn til start kan være regelmessige rier som øker, vannavgang eller blodtingert slim. Ring ved tvil.',humor:'Humøret svinger med søvn og forventning. Det er lov å være spent og lei samtidig.',partner:'Ikke film uten samtykke, og ikke inviter svigermor «i tilfelle» uten at det er avtalt.',kjop:'Kjøp bare det som mangler. Se Lister — resten kan vente til etter fødselen.',kurs:'Fødselsforberedende og spedbarns førstehjelp bør være gjennomført.',bok:'Én jordmor-bok og én ærlig barselbok er fortsatt nok. Ro slår mer lesing nå.'},
+38:{baby:'Lungene er i praksis klare hos de fleste. Fosteret fortsetter å modnes fram til fødselen.',vanlig:'Tyngde, lite søvn og rastløshet er vanlig. Dagene kan føles lange.',forvent:'Termin er et estimat. De fleste går ikke nøyaktig på dagen.',humor:'Sinnssykt kjedelig venting er en fase, ikke et tegn på at noe er galt.',partner:'Vær hjemme mer i kveld. Ikke planlegg hyttetur med argumentet «det skjer sikkert ikke».',kjop:'Sjekk sekk, ladere og snacks. Det er nok handling for i kveld.',kurs:'Ingen nye kurs haster. Kort repetisjon av det dere allerede kan er nok.',bok:'Én jordmor-bok og én ærlig barselbok holder. La bøkene ligge hvis du er lei.'},
+39:{baby:'Modningen fortsetter. Talg og lanugo avtar, og fosteret er i stor grad klar.',vanlig:'Mye er som i uke 38, pluss mer utålmodighet. Det er en vanlig kombinasjon.',forvent:'Hvis det drar ut, følger overvåking lokale rutiner. Jordmor og sykehus styrer det — ikke appen.',humor:'Humøret svinger med venting. Det er greit å være lei uten å late som du nyter hvert minutt.',partner:'Gå en rolig tur sammen, ikke intervalltrening, og hold telefonen ladet.',kjop:'Kjøp bare det som mangler. Se Lister — impulskjøp hjelper sjelden nå.',kurs:'Ingen kurs haster. Dere har det dere trenger av forberedelse.',bok:'Én jordmor-bok og én ærlig barselbok er nok. Ro og praktisk klarhet slår mer teori.'},
+40:{baby:'Dette er den statistiske terminen. Omtrent halvparten er ikke født ennå — og det er forventet.',vanlig:'Alt og ingenting kan skje. Rier som kommer og dør ut er vanlig.',forvent:'Kontroll og eventuell induksjon diskuteres etter faglige kriterier — ikke etter naboens uke 39.',humor:'Du får være lei. Lei er ikke det samme som at fødselen er i gang.',partner:'Ingen press om «kjempe-i-gang»-myter i kveld. Følg det jordmor faktisk sier.',kjop:'Kjøp bare det som mangler. Se Lister — resten kan vente.',kurs:'Ingen kurs. Praktisk klarhet og ladet telefon er nok.',bok:'Én jordmor-bok og én ærlig barselbok holder. Sykehusets råd veier tyngst nå.'},
+41:{baby:'Barnet er fortsatt inne og overvåkes etter sykehusets plan. Modningen fortsetter.',vanlig:'Det er tungt, og søvnen er ofte dårlig. Utålmodighet er vanlig og forståelig.',forvent:'Tilbud om videre kontroll eller induksjon følger retningslinjer. Dette avgjør fagfolk — ikke appen.',humor:'Humøret svinger hardt i overtiden. Det er lov å være ferdig med venting uten å skamme seg.',partner:'Kjør, vent og hent mat. Ikke forklar retningslinjen bedre enn jordmor gjør.',kjop:'Kjøp bare det som mangler. Se Lister — dere er forbi shoppingfasen.',kurs:'Ingen kurs. Følg sykehusets plan.',bok:'La bøkene ligge. Sykehuset og jordmor har ordet nå.'},
+42:{baby:'Det er sjelden å gå hit uten en plan. Forløpet følges tett av sykehuset.',vanlig:'Utmattelse er vanlig. Kroppen og sinnet er ofte slitne av venting.',forvent:'Følg den avtalte planen. Appen har ikke mer å si enn sykehuset i denne fasen.',humor:'Humøret kan være flatt eller irritert. Det er en ærlig reaksjon på en lang ventetid — ikke en karakterdom.',partner:'Du er logistikk i kveld: kjøring, mat, telefon og ro. Ikke kommentator.',kjop:'Ingen nye kjøp. Det dere trenger, har dere sannsynligvis allerede.',kurs:'Ingen kurs. Følg sykehusets plan uten å overstyre den.',bok:'Ingen mer lesing kreves. Fagfolkene nærmest dere har prioritet.'}
+};
+
+const SHOP = {
+"Kropp og helse nå":["Folat 400 µg til uke 12 + multi med D-vitamin","Jod via melk/hvit fisk eller tilskudd etter Helsenorge","Jern bare etter ferritin","Løse klær og BH som ikke graver","Vannflaske og nøytral mat ved kvalme","Gravidpute når søvnen faktisk er ødelagt"],
+"Baby første uken":["6–8 bodyer str. 50–56","4–6 heldrakter","Lue og sokker","Stelleunderlag + nyfødtbleier + vaskekluter","Ett trygt sted å sove","Bilsete prøvd i deres bil hvis dere kjører hjem"],
+"Sove og stelle":["Laken + pose/dyne etter årstid","Stellematte på benk holder","Søppelbøtte med lokk"],
+"Mor etter fødsel":["Store bind og nettrusser","2 amme-BH hvis amming","Brystinnlegg etter behov","Mykt tøy","Nattlampe med varmt lys","Mat i frys / folk som stiller med middag"],
+"Partner og hus":["Varslingsliste når fødselen starter","Powerbank og lange kabler","Snacks hun tåler","Vei, parkering, bom","Plan for dyr/søsken"],
+"Papir":["ID og helsekort","Søk foreldrepenger senest 4 uker før uttak","Partner søker selv","Sjekk barnetrygd etter fødsel"],
+"Vent med":["Barnevogn til dere kjenner trapp/buss/bil","Vippestol, gym, haug med str. 62","Flaskestasjon før dere vet om flaske","Ti oljer og «komplett barnerom»"]
+};
+const BAG=["ID og helseopplysninger","Telefon, lader, lang ledning, powerbank","Tøfler","Mykt tøy til etterpå","Toalettmappe og faste medisiner","Snacks og flaske til begge","Baby utreise: body, heldrakt, lue, teppe etter vær","Bilsete ferdig montert","Partner: skift, tannbørste, kort","Ikke pakk barnerommet"];
+const COURSES=[
+{t:"Fødselsforberedende",n:"Meld uke 16–22. Ta kurset uke 28–34. Partner med."},
+{t:"Spedbarns førstehjelp",n:"Book uke 16–22. Ta det uke 24–32."},
+{t:"Omvisning føde",n:"Uke 32–36 hvis tilbudet finnes."},
+{t:"Ammeveiledning",n:"Kort lesing uke 32–36. Skikkelig veiledning etter fødsel."},
+{t:"Bekken / fysio",n:"Når plager starter, ofte fra uke 16–20."}
+];
+const BOOKS=[
+{t:"Helsenorge — Gravid",n:"Første kilde. Offentlig, oppdatert, norsk. Kosthold, unngå-mat, trening, kontroller, alkohol, sex, helsekort. Les aktuelt tema når spørsmålet dukker opp — ikke fra perm til perm. helsenorge.no/gravid"},
+{t:"Helsenorge-tjenesten Gravid + helsekort",n:"Uke-for-uke og digitalt helsekort hvis jordmor/lege bruker det. Ta likevel med papirkort på kontroller. Innlogging med BankID."},
+{t:"Trygg mammamedisin",n:"Gratis fagfolk om medisiner, forkjølelse, smertestillende, allergi. Bruk før du googler dose. tryggmammamedisin.no"},
+{t:"Mattilsynet — råd til gravide",n:"Detaljer om sushi, lakris, ingefærshots, listeria, vilt med bly. Overstyrer matblogger."},
+{t:"NAV — foreldrepenger",n:"49 uker 100 % eller 59 uker 80 %, kvoter, søknad senest 4 uker før uttak. nav.no. Ikke en bok — den eneste gyldige kilden for pengene deres."},
+{t:"Gravidhjelpen.no",n:"Norsk praktisk oversikt: sjekkliste 107 punkter, permisjonskalkulator, babypakker, sykehussekk. Supplement, ikke erstatning for Helsenorge."},
+{t:"Ammehjelpen",n:"Etter fødsel. ammehjelpen.no og lokallag. Bedre enn å samle fem ammebøker på forskudd."},
+{t:"Svangerskapet — Ellen Ø. Carlsen",n:"Lege og svangerskapsforsker. Til deg som vil ha mekanismer og myteknusing, ikke kos. Les i 1.–2. trimester."},
+{t:"Det gror i mor — Eberhard-Gran og Vangen",n:"To norske svangerskapsforskere. Hva som skjer i kroppen fra befruktning til fødsel. Bra når du vil vite hvorfor, ikke bare at «det er vanlig»."},
+{t:"Det nye livet — Hagtvedt og Holan",n:"To jordmødre. Svangerskap, fødsel, barsel i ett. Les fødsel-delen uke 28–34, barsel-delen etter uke 34."},
+{t:"Gravid — Strand, Rafaelsen, Thorarinsdottir",n:"Tre fødselsleger. Unnfangelse til barsel, pasienthistorier. Brukt av enkelte helsestasjoner. Oppslagsbok, ikke kveldsroman."},
+{t:"Hjelp, jeg skal føde! — Thorbjørn Brook Steen",n:"Fødselslege Ullevål. For deg som vil forstå hva som skjer på sykehusgulvet. Les uke 30–36."},
+{t:"Mamma for første gang — Gro Nylander",n:"Jordmor/lege-klassiker. Stell og amming første måneder. Åpne etter uke 34, bruk som oppslag etterpå."}
+];
+const SYMPTOMS=["Kvalme","Tretthet","Hodepine","Halsbrann","Rygg","Bekken","Søvn","Humør","Hevelse","Spark endret","Annet"];
+
+const MICRO=[
+{n:"Folat (B9)",
+ ref:"400 µg tilskudd hver dag fra planlegging til og med uke 12, i tillegg til mat.",
+ why:"Nevralrøret lukkes tidlig. Det er tabletten som er vist å redusere risiko for ryggmargsbrokk — ikke mat alene.",
+ how:"Ta én tablett med 400 µg folat daglig. Mat hjelper, men erstatter ikke tabletten: ca. 100 g kokte linser ~180 µg, 100 g spinat ~190 µg, 1 appelsin ~40 µg, 2 grove brødskiver ~40–60 µg. Etter uke 12: fortsett med matrik kost; følg jordmor om videre tilskudd."},
+{n:"D-vitamin",
+ ref:"10 µg (400 IE) hver dag gjennom hele svangerskapet.",
+ why:"Trengs for kalsiumopptak. Mors lager påvirker barnets lager ved fødsel.",
+ how:"I Norge anbefales tilskudd, særlig oktober–april. 1 ss tran gir ca. 10 µg. 100 g laks kan gi 10–20 µg, men de fleste dager spiser du ikke det. Beriket melk gir lite per glass. Praktisk: fast tilskudd hver dag + fet fisk når det passer."},
+{n:"Jod",
+ ref:"200 µg hver dag. Ikke over 600 µg.",
+ why:"Viktig for barnets hjerne og nervesystem.",
+ how:"En vanlig måte å dekke behovet: 1 porsjon hvit saltvannsfisk (torsk, sei eller hyse) i uken + 5–8 dl melk eller yoghurt daglig. Uten fisk: mer melk (ofte opp mot 1–1,4 l) eller 150 µg jodtilskudd etter råd. Ca. verdier: 2 dl melk ~30 µg, 1 yoghurt ~30–50 µg, brunost som pålegg ~20–40 µg. Laks gir lite jod. Tang/kelp: ikke bruk som dose."},
+{n:"Jern",
+ ref:"Etter serumferritin (blodprøve). Det finnes ikke én fast tablett-dose for alle.",
+ why:"Jern trengs til oksygentransport og barnets hjerne. Omtrent 850 mg brukes gjennom svangerskapet.",
+ how:"Spis jernrik mat jevnlig: kjøtt, linser/bønner, grove kornprodukter. C-vitamin til måltidet (paprika, kiwi, appelsin) øker opptaket. Unngå kaffe/te til brødmåltid. Omtrentlig i mat: 100 g kjøtt ~2–3 mg, 100 g linser ~3 mg, 2 grove skiver ~2 mg. Tilskudd styres av ferritin (typisk Helsenorge-logikk): over 70 µg/L vanligvis ikke tilskudd; 30–70: 40 mg fra uke 18–20; under 30: 60 mg; under 12: start med en gang. Avklar med jordmor/lege."},
+{n:"Kalsium",
+ ref:"950 mg hver dag.",
+ why:"Bygger barnets skjelett. Ved for lite kalsium i kosten tæres mors eget lager.",
+ how:"Tre porsjoner meieri dekker det meste: 2 dl melk ~240 mg, 1 yoghurt ~200–250 mg, 1 skive gulost ~150–200 mg. Alternativt ca. 7 dl melk eller kalsiumberiket plantedrikk (~840 mg). Brokkoli og mandler bidrar lite alene — bruk dem som tillegg, ikke hovedkilde."},
+{n:"Vitamin B12",
+ ref:"4,5 µg hver dag.",
+ why:"Trengs for hjerne og nervesystem.",
+ how:"Ved vanlig blandet kost dekker animalske matvarer behovet: 1 egg ~0,7 µg, 1 dl melk ~0,4 µg, 100 g torsk ~1–2 µg, 100 g kjøtt ~1–2 µg. Vegetar/vegan: beriket drikk + B12-tilskudd. Ikke gjett dosen — avklar med jordmor."},
+{n:"Omega-3 / DHA",
+ ref:"Fet fisk 2–3 middager i uken. Ofte nevnt mål: minst 200 mg DHA.",
+ why:"Bidrar til utvikling av hjerne og netthinne.",
+ how:"1 middag med laks (ca. 150 g) dekker DHA for flere dager. Makrell i tomat som pålegg flere ganger i uken bidrar. Spiser dere lite fet fisk: spør jordmor om tilskudd (algeolje hvis vegansk). Unngå fisk med høyt miljøgiftnivå (se listen under Unngå)."}
+];
+
+const ACTIONS=[
+{t:"Røyk, snus og alkohol",n:"Alt går over morkaken. Ingen kjent trygg alkoholdose. Slutt så tidlig som mulig — jordmor har verktøy."},
+{t:"Gange 2,5–5 t/uke",n:"Mer blod gjennom morkaken, bedre glukosebruk, passe vektøkning. Litt varm og andpusten."},
+{t:"Bekkenbunn hver dag",n:"8–12 knip, hold 6–8 sek, 2–3 økter. Gange erstatter ikke knip. Forebygger lekkasje."},
+{t:"Ikke stillesitting i timevis",n:"Reis deg hver time. Trappe og korte oppdrag teller."},
+{t:"Søvn og sideleie",n:"Når magen er stor: side, gjerne venstre. Pute mellom knær."},
+{t:"Tannhelse",n:"Si at du er gravid. Infeksjon i munnen er betennelse i kroppen."},
+{t:"Katt og hage",n:"Andre tømmer kattedo. Hansker i jord. Skyll bær og grønt. Toksoplasma."},
+{t:"Mat-hygiene",n:"Gjennomstekt kjøtt. Varme rester rykende. Holdbarhet på pålegg."},
+{t:"Koffein under 200 mg",n:"Ca. 1–2 kaffe eller 3–4 svart te."},
+{t:"Kikhostevaksine",n:"Tilbys ofte rundt uke 24. Beskytter nyfødte. Ta det som tilbys."},
+{t:"Mindre liv",n:"Lær mønsteret. Endring: ring føde, ikke vent."},
+{t:"Psykisk helse",n:"Vedvarende mørke, angst som styrer dagen: si det på kontroll. Perfeksjon er ikke et helsekrav."}
+];
+
+
+const TO=[
+{t:"Partner mot gravid",n:"Hun bærer kroppen. Du bærer logistikken. Spør «hva trenger du i kveld» og gjør den tingen ferdig. Mat, oppvask, avtale, stillhet. Ikke alle tre halvgjort."},
+{t:"Ikke forklar kroppen hennes",n:"Unngå «det er jo bare hormoner» og «du er jo så sensitiv». Si det du ser: «Du ser sliten ut. Jeg tar kvelden.»"},
+{t:"Sex og nærhet",n:"Lyst svinger. Nei er nei uten diskusjon. Ja kan se annerledes ut enn før. Helsenorge: sex skader ikke barnet ved normalt svangerskap. Blødning: stopp og spør jordmor."},
+{t:"Sosialt",n:"Du er filteret mot familie som vil kjenne på magen og spørre om vekt. Hun skal ikke være resepsjon."},
+{t:"Penger og permisjon",n:"Åpne NAV sammen. Partner søker selv. Ikke la henne være sekretær for fedrekvoten."},
+{t:"Gravid mot partner",n:"Han eller hun er ikke tilskuer. Si hva du trenger i én setning. «Jeg vil ha middag og ro» slår å håpe at det merkes."},
+{t:"Ikke bruk partner som søppelspann",n:"Svingninger er ekte. Skyld er det ikke. Si «jeg er lei, det er ikke deg» når det er sant. Unnskyld når det ikke var det."},
+{t:"La partner få være redd også",n:"Termin, penger, fødsel og «blir jeg en idiot som forelder» er vanlige tanker. De skal ikke konkurrere med kvalmen din, men de skal få plass."},
+{t:"Tid til partner",n:"Fem minutter uten å snakke om mage, innkjøp eller rier. Det er hensyn, ikke luksus."},
+{t:"Etter fødsel",n:"Partner tar dør, mat og natt når det er mulig. Gravid (nå mor) slipper å være prosjektleder for gjester. Begge sover dårlig. Ingen av dere «vinner» barsel."},
+{t:"Når det knirker",n:"Kort avtale: én ting hver i huset, ett spørsmål før kontroll, ingen sarkasme om kroppen. Hvis det likevel er mørkt over dager: si det til jordmor. Par og psykisk helse hører hjemme der."}
+];
+const COURSES_LONG=[
+{t:"Fødselsforberedende",n:"Når: meld på i uke 16–22, ta kurset i uke 28–34. Da er det nært nok til å huskes, og plassene er sjelden tomme ennå. Hva: faser, stillinger, pust, når dere ringer. Hvor: kommune, sykehus, jordmor. Partner med."},
+{t:"Spedbarns førstehjelp",n:"Når: book i uke 16–22, ta det i uke 24–32. Etter uke 36 er kalenderen for tett. 2–4 timer. Luftveier og kvelning."},
+{t:"Ammeveiledning",n:"Når: ikke som stort kurs før termin. Les kort i uke 32–36. Egentlig veiledning: første ukene etter fødsel (helsestasjon, Ammehjelpen) når barnet ligger på brystet."},
+{t:"Bekken / fysio",n:"Når: så snart det gjør vondt eller lekkasje starter — ofte fra uke 16–20, ikke «etter fødsel». Henvisning via jordmor."},
+{t:"Fødeavdelingens omvisning",n:"Når: uke 32–36 hvis de tilbyr. Da vet dere inngang, parkering og hvor partner venter."},
+{t:"Partner praktisk",n:"Når: samme kveld som fødselskurset. Kjørevei, tegn til start, hvem som varsles. Ikke eget diplomkurs."}
+];
+
+function weekTasks(w){
+  return WEEK_TASKS.filter(x=>w>=x.from && w<=x.to);
+}
+
+const WEEK_TASKS=[
+{from:4,to:5,t:"Ta gravidtest på nytt ved tvil. Start folat 400 µg i dag."},
+{from:4,to:12,t:"Folat hver dag. Glemte dose: ta den når du husker, ikke dobbel neste dag uten videre."},
+{from:5,to:8,t:"Bestill første svangerskapskontroll (fastlege eller jordmor)."},
+{from:5,to:10,t:"Les Helsenorge kosthold og unngå-listen én gang i ro."},
+{from:6,to:12,t:"Første kontroll: blodtrykk, urin, Hb, ferritin, blodtype, smitteprøver som tilbys, vekt/KMI, samtale om psykisk helse og vaner."},
+{from:6,to:12,t:"Si fra om faste medisiner. Tryggmammamedisin.no ved tvil."},
+{from:6,to:40,t:"Ingen alkohol. Snus/røyk: slutt, be om hjelp."},
+{from:6,to:40,t:"Koffein under 200 mg."},
+{from:7,to:12,t:"Bestem når jobben får vite. Fri med lønn til kontroll når det ikke kan time utenom."},
+{from:7,to:40,t:"Kattedo: andre tømmer. Hansker i jord. Skyll grønt."},
+{from:8,to:10,t:"Tannlegetime. Si at du er gravid."},
+{from:8,to:16,t:"Vurder tilrettelegging på jobb (løft, skift, kjemi)."},
+{from:11,to:14,t:"Tilbud om tidlig ultralyd 11+0–13+6. NIPT er tillatt for alle — ta stilling, ikke bli presset."},
+{from:12,to:12,t:"Folattilskudd kan avsluttes etter uke 12 med mindre jordmor sier noe annet. Fortsett D-vitamin."},
+{from:12,to:16,t:"Løse klær. Én god BH."},
+{from:13,to:20,t:"Meld på fødselsforberedende kurs."},
+{from:16,to:22,t:"Book spedbarns førstehjelp."},
+{from:17,to:19,t:"Rutineultralyd: termin, organer, morkake, antall barn. Partner med."},
+{from:18,to:22,t:"Start jern etter ferritin-svar hvis det ble anbefalt fra uke 18–20."},
+{from:18,to:28,t:"Kundeklubber hvis dere vil ha babypakker. Ikke handle for å utløse dem."},
+{from:18,to:24,t:"Snakk 49 uker 100 % vs 59 uker 80 %. Valget låses når uttak starter."},
+{from:20,to:28,t:"Lær sparkemønster. Skriv ned når barnet er våkent."},
+{from:20,to:30,t:"Start liste til sykehussekk. Ikke pakk ennå."},
+{from:24,to:24,t:"Kontroll uke 24: BT, urin, vekt, SF-mål, liv. Tilbud om kikhostevaksine. Glukosebelastning hvis du er i risikogruppe."},
+{from:24,to:28,t:"Bekkenbunn som vane, ikke dugnad."},
+{from:26,to:32,t:"Snakk fødested og fødeønsker — kort."},
+{from:28,to:28,t:"Kontroll uke 28. Ny Hb. Anti-D hvis du er RhD-negativ og det er indisert."},
+{from:28,to:34,t:"Søk foreldrepenger. Frist senest 4 uker før uttak. Partner søker selv."},
+{from:28,to:36,t:"6–8 middager i frys."},
+{from:30,to:34,t:"Installer bilsete i deres bil."},
+{from:32,to:32,t:"Kontroll uke 32. Samtale amming."},
+{from:32,to:36,t:"Kjøp bind/nettruse. 2 amme-BH hvis amming."},
+{from:34,to:36,t:"Pakk sekk så dere kan dra på 20 minutter."},
+{from:35,to:37,t:"Hvem ringer, kjører, passer dyr. Navn på lap."},
+{from:36,to:36,t:"Kontroll uke 36. Leie. Forbered barsel."},
+{from:36,to:38,t:"Helsestasjon: hvor første time etter fødsel."},
+{from:38,to:38,t:"Kontroll uke 38."},
+{from:38,to:42,t:"Vei, tank, lader, sekk. Ingen hyttetur uten reserve."},
+{from:40,to:40,t:"Kontroll uke 40. Overtid etter lokale rutiner."},
+{from:41,to:42,t:"Følg sykehusets plan. Appen overstyrer den ikke."},
+{from:4,to:42,t:"Gå eller tilsvarende de fleste dager hvis kroppen tillater det."},
+{from:4,to:42,t:"Ved mindre liv, blødning, vannavgang, sterk hodepine, synsforstyrrelse, plutselig hevelse: ring. Ikke sjekklisten."},
+{from:1,to:12,t:"Viktig Gravidhjelpen: folat 400 µg daglig."},
+{from:1,to:42,t:"Viktig: ingen alkohol, røyk, snus eller andre rusmidler."},
+{from:4,to:4,t:"Viktig: gravidtest hvis mensen uteblir. Sjekk faste medisiner (tryggmammamedisin.no)."},
+{from:5,to:6,t:"Viktig: bestill og gå til første kontroll. Du velger jordmor eller fastlege."},
+{from:6,to:8,t:"Viktig: blodprøver — blodtype, Rh, infeksjoner, jern/ferritin."},
+{from:8,to:14,t:"Viktig: tidlig ultralyd 11–14 (tilbud). Følg opp svaret."},
+{from:14,to:16,t:"Viktig: informer arbeidsgiver om graviditet og forventet termin når du er klar. Tilrettelegging krever at de vet det."},
+{from:15,to:16,t:"Kontroll rundt uke 15–16 hvis det er avtalt i programmet deres."},
+{from:17,to:20,t:"Viktig: rutineultralyd 17–20. Bestill i god tid."},
+{from:20,to:20,t:"Kontroll rundt uke 20."},
+{from:24,to:24,t:"Viktig: spør om glukosebelastning. Kikhostevaksine tilbys ofte her."},
+{from:25,to:26,t:"Viktig: les foreldrepenger. Informer jobb om forventet permisjonsperiode."},
+{from:26,to:28,t:"Viktig: velg fødested og meld dere på. Sjekk kapasitet."},
+{from:27,to:28,t:"Viktig: RhD-negativ — spør om profylakse/anti-D."},
+{from:28,to:28,t:"Viktig: tettere kontroller. Meld fødselsforberedende kurs hvis ikke gjort."},
+{from:30,to:32,t:"Viktig: spør om barnets leie. Seteleie: ytre vending diskuteres med lege."},
+{from:33,to:34,t:"Viktig: søk foreldrepenger senest 4 uker før uttak. Partner søker selv. Bekreft permisjonsdatoer skriftlig med jobb."},
+{from:35,to:35,t:"Viktig: pakk sekk. Monter bilstol."},
+{from:35,to:37,t:"Viktig: spør om GBS (gruppe B-streptokokker) uke 35–37 etter lokale rutiner."},
+{from:37,to:37,t:"Viktig: foreldrepenger tidligst 3 uker før termin for mor. Lær tegn: rier, vannavgang, slimpropp."},
+{from:38,to:38,t:"Viktig: ukentlig kontroll. Lagre fødeavdelingens nummer."},
+{from:39,to:39,t:"Viktig: repetér når dere ringer (bl.a. rier som øker; mange steder sier ca. 5 min — følg DITT sykehus). Hjem: seng, klær, bleier, stol."},
+{from:40,to:40,t:"Viktig: kontroll. Sparkemønster."},
+{from:41,to:41,t:"Viktig: overtidskontroll (CTG/ultralyd etter plan). Spark daglig. Igangsetting diskuteres ofte rundt 41+3 til 42."},
+{from:42,to:42,t:"Viktig: de fleste sykehus igangsetter senest uke 42. Møt til avtalte kontroller."}
+];
+const EAT_YES=[
+["Fullkorn","Grovt brød, kornblanding, fullkornsris og -pasta. Folat, jern, fiber."],
+["Grønnsaker, frukt, bær","Del av alle måltider. C-vitamin (paprika, kiwi, sitrus, bær) øker jernopptak."],
+["Belgvekster","Bønner, linser, erter. Protein, jern, folat."],
+["Nøtter og frø","Vanlige porsjoner."],
+["Meieri / beriket plantedrikk","Kalsium, jod fra melk/yoghurt/brunost, protein."],
+["Fisk 2–3 ganger i uken","Gjerne halvparten fet. Tunfisk på boks er ok."],
+["Gjennomstekt kjøtt og fjærfe","Ikke rosa. Klar saft."],
+["Kokte skalldyr","Kokte reker, kokte blåskjell, hvitt krabbekjøtt."],
+["Trygg ost","Gulost, parmesan, grana, emmentaler, smelteost, brunost, prim, nyåpnet pasteurisert smøreost og feta på glass."],
+["Sushi av fersk trygg fisk","Ikke fersk tunfisk, hai, sverdfisk, skate."],
+["Røkt og gravet fisk","Godt innen holdbarhet."],
+["Vann","Tørstedrikk. Melk eller juice til kornmåltid om du vil."],
+["Nøkkelhull","Mindre salt, sukker og usunt fett."]
+];
+const EAT_NO=[
+["Alkohol","Ingen kjent trygg nedre grense. Går over morkaken. Hjernen utvikles hele svangerskapet."],
+["Rakfisk","Bakterier."],
+["Rått eller rosa kjøtt, spekemat, gravet, tartar, roastbiff","Toksoplasma og listeria. Over 70 °C er trygt."],
+["Myke muggoster og kittost","Brie, camembert, gorgonzola, chèvre, roquefort, munster, taleggio — også av pasteurisert melk."],
+["Upasteurisert melk og produkter av den","Listeria."],
+["Selkjøtt, blåkveite over 3 kg","Miljøgifter."],
+["Gjedde; abbor over 25 cm; ørret eller røye over 1 kg; all selvfanget ferskvannsfisk","Kvikksølv."],
+["Hai, sverdfisk, skate, fersk tunfisk","Kvikksølv. Boks er trygt."],
+["Fiskelever og rognleverpostei","Miljøgifter og høyt vitamin A."],
+["Brunmat i krabbe","Hvitt kjøtt er ok."],
+["Vilt med mulig bly","Ammunisjon."],
+["Måkeegg","Miljøgifter."],
+["Ingefærshots og ingefærtilskudd","Mattilsynet: unngå."],
+["Mye lakris","Glycyrrhizinsyre. Ingen fastsatt trygg mengde."],
+["Mye urtete, rooibos, kamille, peppermynte, grønn te, ammete","Mulige plantegifter. Nypete eller ren fruktte er tryggere."],
+["For mye koffein","Maks ca. 200 mg/dag: omtrent 1–2 kopper kaffe eller 3–4 kopper svart te."]
+];
+const CHECKLIST=[
+{g:"Første trimester",items:["Bestill første kontroll","Folat 400 µg","Multi med D-vitamin og ev. jod","Ferritin når det tilbys","Les Helsenorge kosthold","Bestem når jobben får vite det","Kattedo: andre tømmer, vask hender, skyll bær og grønt","Tannlege: si at du er gravid"]},
+{g:"Andre trimester",items:["Ultralyd rundt uke 18","Jern etter ferritin-svar","Meld på fødselsforberedende kurs","Book spedbarns førstehjelp","Snakk 49 uker 100 % versus 59 uker 80 %","Tilrettelegging på jobb hvis nødvendig","Lær sparkemønster","Kundeklubber bare hvis dere vil ha babypakker"]},
+{g:"Tredje trimester",items:["Søk foreldrepenger senest 4 uker før uttak","Partner søker selv","Pakk sykehussekk","Installer bilsete","Fødeønsker kort","Hvem ringer, kjører, passer dyr","Mat i frys","Bind og nettruse hjemme","Helsestasjon: hvor og når første time"]},
+{g:"Rettigheter",items:["Fri med lønn til kontroll når det ikke kan time utenom arbeid","Arbeidsgiver skal tilrettelegge så langt det er mulig","Oppsigelsesvern ved graviditet og permisjon","Mor tar vanligvis 3 uker før termin","Fedre-/medmorkvote faller som hovedregel bort om den ikke tas ut"]}
+];
+
+const UKETIPS={
+4:'Folat 400 µg daglig fra planlegging til uke 12 reduserer risiko for nevralrørsdefekt. Tablett, ikke bare mat. (Helsedirektoratet)',
+5:'Ingen kjent trygg alkoholdose. Alkohol går over morkaken hele svangerskapet. (Helsenorge)',
+6:'Bestill første kontroll. Offentlig svangerskapsomsorg: basisprogram med ni konsultasjoner ved normalt forløp.',
+7:'Røyk og snus: slutt så tidlig som mulig. Jordmor har verktøy. Ikke kutt alene hvis det ikke går.',
+8:'Serumferritin i 1. trimester styrer jern — ikke start høydose på sjangs. (Helsedirektoratet)',
+9:'Koffein: hold deg rundt maks 200 mg/dag (ca. 1–2 kaffe eller 3–4 svart te).',
+10:'Fysiske plager uten faresignaler: små måltider, væske, hvile. Google erstatter ikke kontroll.',
+11:'Tidlig ultralyd 11+0–13+6 er et tilbud, ikke plikt. NIPT er tillatt for alle — beslutning, ikke press.',
+12:'Folattablett kan avsluttes etter uke 12 med mindre annet er avtalt. Fortsett D-vitamin 10 µg.',
+13:'Aktivitet: 2,5–5 timer i uken med lett andpustenhet. Rask gange er førstelinje. (Helsenorge)',
+14:'Bekkenbunn: knip som vane. Gange erstatter ikke knip.',
+15:'Tre porsjoner meieri eller beriket plantedrikk dekker det meste av kalsium 950 mg og bidrar til jod.',
+16:'Jod 200 µg: hvit saltvannsfisk ukentlig + 5–8 dl melk/yoghurt, ellers tilskudd. Unngå tang som dose.',
+17:'Bestill rutineultralyd (typisk 17–19) i god tid. Det er organ- og terminsjekk, ikke underholdning.',
+18:'Etter ultralyd: still spørsmål om morkake, fostervann og leie. Skriv ned svaret.',
+19:'Jern fra uke 18–20 bare etter ferritin-svar. C-vitamin til måltid øker opptak. Te/kaffe til brød hemmer.',
+20:'Begynn å merke mønster i spark. «Mindre liv» senere = kontakt føde, ikke vent på app.',
+21:'49 uker 100 % eller 59 uker 80 %. Valget gjelder begge og låses når uttak starter. (NAV)',
+22:'Hevelse + sterk hodepine eller synsforstyrrelse: ring. Det er preeklampsi-varsel, ikke «vanlig sliten».',
+23:'Influensavaksine tilbys gravide i sesong. Ta det som tilbys det året.',
+24:'Kikhostevaksine tilbys ofte nå — beskytter nyfødte. Glukosebelastning ved risiko, ikke av sladder.',
+25:'Søk kunnskap om amming kort. Ferdighet læres etter fødsel (helsestasjon/Ammehjelpen).',
+26:'Ved bekkenløsning: tilpass gange, ev. fysio. «Hold ut» er ikke evidens.',
+27:'RhD-negative: spør om anti-D. Det er program, ikke valgfritt pynt.',
+28:'Tettere kontroller er normalen i 3. trimester. Sparkemønster viktigere enn kalender.',
+29:'Sideleie når du sover, særlig venstre, anbefales sent i svangerskapet. Rygg hele natten: unngå.',
+30:'Søk foreldrepenger senest 4 uker før uttak. Partner søker selv.',
+31:'Fødeønsker: korte, praktiske. De er ønsker, ikke kontrakt.',
+32:'Spedbarn skal sove på ryggen, eget underlag, uten løse tepper. Forbered det nå. (trygg sovestilling)',
+33:'Bilsete før hjemreise. Prøvd i *deres* bil.',
+34:'GBS-prøve 35–37 tilbys etter lokale rutiner. Spør, ikke anta.',
+35:'Pakk sekk så dere kan dra på 20 minutter. Sykehuset har bleier underveis.',
+36:'Tegn til start: rier som øker, vannavgang, blodtingert slim. Ved tvil: ring føde. Ikke vent på «5 min fasit» fra app.',
+37:'Mor kan starte foreldrepenger tidligst 3 uker før termin. Sjekk at søknaden sitter.',
+38:'Ukentlig kontroll. Lagre fødeavdelingens direkte nummer.',
+39:'Overvåk spark hver dag. Endring i mønster slår «antall i appen».',
+40:'Termin er gjennomsnitt. Induksjon styres av faglige kriterier, ikke naboens uke 39.',
+41:'Overtid: CTG/ultralyd etter sykehusets plan. Igangsetting diskuteres ofte rundt 41+3 til 42.',
+42:'Følg avtalt plan. Appen har ikke mer vekt enn fødeavdelingen.',
+};
+const HILSEN={
+4:'Hei. Jeg er så vidt begynt — en liten klump celler med en plan. Dere merker meg knapt ennå, og det er helt greit.',
+5:'Hjertet mitt øver på å slå. Jeg er fortsatt tiny, og folaten din er stille jobb for ryggen min. Takk for at dere passer på.',
+6:'Jeg folder ut armer som knopper. Lukten av mat er deres sak; jeg bare vokser i ro. Vi sees etter hvert.',
+7:'Ansiktet mitt er under arbeid. Jeg trenger mer ro enn fest akkurat nå — og det er en fin gave å gi meg.',
+8:'Jeg beveger meg allerede, men du kjenner det ikke ennå. Det kommer, i sitt eget tempo. Det er greit å vente.',
+9:'Organene mine er anlagt som skisser. Resten er finpuss i måneder. Dere gjør allerede mer enn dere tror.',
+10:'Jeg heter foster nå. Det høres større ut enn jeg er — men jeg er her, og jeg fortsetter.',
+11:'Jeg strekker meg. Du blir andpusten i trappa, og vi deler oksygenet. Det er et stille samarbeid.',
+12:'Mange puster lettet ut nå. Jeg lover ingenting, men jeg fortsetter — og det er nok for i dag.',
+13:'Jeg øver mimikk ingen ser. Andre trimester er ikke ferie for deg; for meg er det byggestøy. Vi holder ut sammen.',
+14:'Jeg svelger fostervann. Det er trening, ikke tørst. Kroppen din gjør et imponerende stykke arbeid.',
+15:'Appetitten din er delvis min bestilling. Takk for fisken hvis den kommer — og for tålmodigheten når den ikke gjør det.',
+16:'Hvis du kjenner en boble: kanskje meg, kanskje gass. Begge deler er vanlig, og begge deler betyr at livet pågår.',
+17:'Jeg legger på fett — ikke mye, men jeg øver på å bli myk. Dere trenger ikke elske speilet hver dag for at jeg skal ha det bra.',
+18:'Hvis det er ultralyd: hei. Jeg poserer dårlig, men jeg er glad for at dere ser meg. Det går over, både nervøsiteten og den rare stillingen.',
+19:'Jeg hører mer enn før. Stemmen din er allerede kjent, og den er et trygt sted å lande.',
+20:'Halvveis. Jeg sparker ikke for å plage deg — jeg kartlegger veggene. Takk for plassen.',
+21:'Dere snakker permisjon. Jeg forstår null av NAV, men fortsett likevel. Det er omsorg på deres språk.',
+22:'Lungene mine øver uten luft. Rart, men det er opplegget — og kroppen din holder meg mens jeg øver.',
+23:'Jeg har døgnrytme. Den matcher sjelden deres, og det er ikke personlig. Vi finner rytmen senere.',
+24:'Hvis det blir sukkerprøve: det handler også om meg, ikke om karakter. Dere gjør det som trengs, og det er nok.',
+25:'Jeg hører mer bass enn detaljer. Les gjerne høyt uansett — stemmen din kommer fram.',
+26:'Plassen minker. Sparkene blir rull. Jeg er her, tett inntil, og det er meningen.',
+27:'Jeg får antistoffer av deg. En stille overføring, og en av de fineste tingene du gjør uten å merke det.',
+28:'Tredje etappe. Jeg åpner øynene av og til. Det er mørkt og bra — akkurat slik det skal være nå.',
+29:'Ribbeina dine får kjenne hælen. Unnskyld. Det er ikke personlig — bare trangt og ivrig.',
+30:'Jeg øver pusten uten å puste. Dere øver veien til føde. Fair deal, og jeg er takknemlig for begge deler.',
+31:'Jeg lagrer fett og inntrykk. En rolig stemme slår podcast på full guffe. Dere trenger ikke underholde meg — bare være der.',
+32:'Det er trangt. Jeg strekker der jeg får plass, og det er derfor natta er urolig. Vi klarer denne biten også.',
+33:'Huden min blir mindre rynkete. Dere monterer stol. Smart, varmt og akkurat i tide.',
+34:'Jeg er nesten klar på papiret. Kroppen din vet ofte mer enn kalenderen — stol gjerne litt på den.',
+35:'Jeg synker kanskje ned. Du puster lettere og tisser oftere. Vi bytter plager, og det er en merkelig form for lagspill.',
+36:'Hodet mitt leter etter utgang. Ingen grunn til panikk — bare fysikk, tålmodighet og et team rundt dere.',
+37:'Jeg kan komme når som helst. Jeg kan også vente. Begge deler er innenfor, og begge deler er lov.',
+38:'Lungene mine er i praksis klare. Utålmodigheten din er det også. Vi er nærmere enn det føles noen dager.',
+39:'Jeg sjekker ikke datoen. Dere kan slutte å spørre meg via magen — jeg kommer når det er tid.',
+40:'Termin er et estimat. Jeg har ikke avtalt klokkeslett, men jeg er klar når kroppen sier ifra.',
+41:'Jeg er fortsatt her. Tell spark, og ring hvis jeg blir stille. Det er den eneste meldingen som virkelig betyr noe.',
+42:'Nå styrer sykehuset. Jeg har sagt det jeg kan si herfra — resten ordner dere sammen med folk som kan faget.'
+};
+const KEY="ossto.v1";
+const state=load();
+function defaults(){return{nameA:"",nameB:"",due:"",role:"gravid",setup:false,logs:[],kicks:[],weights:[],appts:[],notes:"",shop:{},bag:{},names:[],contractions:[],checks:{},tab:"hjem",browseWeek:null,kunnskap:"oversikt",phoneFode:"",phoneLege:"",bt:[],sf:[],water:[],meds:[],questions:"",birthplan:"",vax:{},contacts:"",planSub:"kalender",events:[],staples:[],shopList:[],budget:{income:[],expense:[],month:new Date().toISOString().slice(0,7)},lifePlan:[],memories:[]}}
+function load(){try{const raw=JSON.parse(localStorage.getItem(KEY)||"{}");const d=defaults();const s=Object.assign({},d,raw);s.budget=Object.assign({},d.budget,raw.budget||{});if(!Array.isArray(s.budget.income))s.budget.income=[];if(!Array.isArray(s.budget.expense))s.budget.expense=[];if(!s.budget.month)s.budget.month=d.budget.month;if(!Array.isArray(s.events))s.events=[];if(!Array.isArray(s.staples))s.staples=[];if(!Array.isArray(s.shopList))s.shopList=[];if(!Array.isArray(s.lifePlan))s.lifePlan=[];if(!Array.isArray(s.memories))s.memories=[];if(!s.planSub)s.planSub="kalender";if(s.tab==="sjekk"){s.tab="kunnskap";s.kunnskap="sjekk"}return s}catch(e){return defaults()}}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+let _idb=null,_idbOk=null,_photoCache={},_pendingMemFile=null,_pendingLifeFile=null;
+function openPhotoDb(){
+  return new Promise(function(resolve,reject){
+    if(_idbOk===false){reject(new Error("idb"));return}
+    if(_idb){resolve(_idb);return}
+    if(!window.indexedDB){_idbOk=false;reject(new Error("noidb"));return}
+    const req=indexedDB.open("familienvaar",1);
+    req.onupgradeneeded=function(){const db=req.result;if(!db.objectStoreNames.contains("photos"))db.createObjectStore("photos")};
+    req.onsuccess=function(){_idb=req.result;_idbOk=true;resolve(_idb)};
+    req.onerror=function(){_idbOk=false;reject(req.error||new Error("idb"))};
+  });
+}
+function putPhoto(key,val){
+  return openPhotoDb().then(function(db){
+    return new Promise(function(resolve,reject){
+      const tx=db.transaction("photos","readwrite");
+      tx.objectStore("photos").put(val,key);
+      tx.oncomplete=function(){resolve()};
+      tx.onerror=function(){reject(tx.error)};
+    });
+  });
+}
+function getPhoto(key){
+  return openPhotoDb().then(function(db){
+    return new Promise(function(resolve,reject){
+      const r=db.transaction("photos","readonly").objectStore("photos").get(key);
+      r.onsuccess=function(){resolve(r.result||null)};
+      r.onerror=function(){reject(r.error)};
+    });
+  });
+}
+function delPhoto(key){
+  if(!key)return Promise.resolve();
+  if(_photoCache[key]&&String(_photoCache[key]).indexOf("blob:")===0){try{URL.revokeObjectURL(_photoCache[key])}catch(e){}}
+  delete _photoCache[key];
+  return openPhotoDb().then(function(db){
+    return new Promise(function(resolve){
+      const tx=db.transaction("photos","readwrite");
+      tx.objectStore("photos").delete(key);
+      tx.oncomplete=function(){resolve()};
+      tx.onerror=function(){resolve()};
+    });
+  }).catch(function(){});
+}
+function compressImage(file){
+  return new Promise(function(resolve,reject){
+    const fr=new FileReader();
+    fr.onerror=function(){reject(fr.error)};
+    fr.onload=function(){
+      const img=new Image();
+      img.onload=function(){
+        let w=img.width,h=img.height;const max=1280;
+        if(w>max||h>max){if(w>=h){h=Math.round(h*max/w);w=max}else{w=Math.round(w*max/h);h=max}}
+        const c=document.createElement("canvas");c.width=w;c.height=h;
+        c.getContext("2d").drawImage(img,0,0,w,h);
+        c.toBlob(function(b){if(b)resolve(b);else resolve(c.toDataURL("image/jpeg",0.72))},"image/jpeg",0.72);
+      };
+      img.onerror=function(){reject(new Error("img"))};
+      img.src=fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+function blobToDataURL(blob){
+  return new Promise(function(resolve,reject){
+    if(typeof blob==="string"){resolve(blob);return}
+    const r=new FileReader();r.onload=function(){resolve(r.result)};r.onerror=reject;r.readAsDataURL(blob);
+  });
+}
+function storeCompressedPhoto(file){
+  return compressImage(file).then(function(compressed){
+    const key="ph_"+uid();
+    return putPhoto(key,compressed).then(function(){
+      return {photoKey:key,photoData:null,idb:true};
+    }).catch(function(){
+      return blobToDataURL(compressed).then(function(dataUrl){
+        state._idbLimited=true;
+        return {photoKey:key,photoData:dataUrl,idb:false};
+      });
+    });
+  });
+}
+function photoSrcFor(key,data){
+  if(data)return Promise.resolve(data);
+  if(!key)return Promise.resolve(null);
+  if(_photoCache[key])return Promise.resolve(_photoCache[key]);
+  return getPhoto(key).then(function(blob){
+    if(!blob)return null;
+    const url=typeof blob==="string"?blob:URL.createObjectURL(blob);
+    _photoCache[key]=url;
+    return url;
+  }).catch(function(){return null});
+}
+function hydratePhotos(){
+  document.querySelectorAll("img[data-photokey],img[data-photodata]").forEach(function(img){
+    const key=img.getAttribute("data-photokey")||"";
+    const data=img.getAttribute("data-photodata")||"";
+    photoSrcFor(key||null,data||null).then(function(src){if(src)img.src=src});
+  });
+}
+function openPhotoModal(src){
+  if(!src)return;
+  const prev=document.getElementById("photomodal");if(prev)prev.remove();
+  const wrap=document.createElement("div");wrap.className="photo-modal";wrap.id="photomodal";
+  const im=document.createElement("img");im.alt="Minne";im.src=src;
+  wrap.appendChild(im);
+  wrap.onclick=function(){wrap.remove()};
+  document.body.appendChild(wrap);
+}
+function memThumbHtml(photoKey,photoData){
+  if(!photoKey&&!photoData)return "";
+  const dk=photoKey?(' data-photokey="'+esc(photoKey)+'"'):"";
+  const dd=photoData?(' data-photodata="'+esc(photoData)+'"'):"";
+  return '<img class="mem-thumb" alt="" src=""'+dk+dd+' data-openphoto="1"/>';
+}
+function parseDate(s){if(!s)return null;const d=new Date(s+"T12:00:00");return isNaN(d)?null:d}
+function weekNum(){const due=parseDate(state.due);if(!due)return null;const start=new Date(due);start.setDate(start.getDate()-280);const days=Math.floor((Date.now()-start)/86400000);return Math.min(42,Math.max(1,Math.floor(days/7)+1))}
+function daysLeft(){const due=parseDate(state.due);if(!due)return null;return Math.ceil((due-new Date())/86400000)}
+
+function exportPdf(){
+ const w=weekNum()||"—";
+ const left=daysLeft();
+ const c=WEEKS[weekNum()]||{};
+ const esc2=esc;
+ const checked=Object.entries(state.checks||{}).filter(([,v])=>v).map(([k])=>k);
+ const html=`<!DOCTYPE html><html lang="no"><head><meta charset="utf-8"><title>familien vår — utskrift</title>
+ <style>
+  body{font-family:Georgia,serif;color:#2a1f1c;max-width:720px;margin:24px auto;padding:0 16px;line-height:1.45}
+  h1{font-size:26px;margin:0 0 6px}h2{font-size:16px;margin:22px 0 8px;border-bottom:1px solid #e4d5c8;padding-bottom:4px}
+  .muted{color:#7d6a63;font-size:13px}p{margin:6px 0}.sec{margin:12px 0 18px}
+  @media print { body{margin:0;max-width:none} }
+ </style></head><body>
+ <h1>familien vår</h1>
+ <p class="muted">${esc2(state.nameA)} og ${esc2(state.nameB)} · termin ${esc2(state.due)} · uke ${w} · ${left==null?"":left+" dager til/over termin"}</p>
+ <p class="muted">Oppsummering fra den private appen. Ikke journal. Ikke erstatning for jordmor eller Helsenorge. Skriv ut via nettleseren: Lagre som PDF.</p>
+ <h2>Denne uken</h2>
+ <div class="sec">
+  <p><b>Baby:</b> ${esc2(c.baby||"")}</p>
+  <p><b>Vanlig:</b> ${esc2(c.vanlig||"")}</p>
+  <p><b>Forvent:</b> ${esc2(c.forvent||"")}</p>
+  <p><b>Partner:</b> ${esc2(c.partner||"")}</p>
+ </div>
+ <h2>Avtaler</h2>
+ <div class="sec">${(state.appts||[]).slice().sort((a,b)=>a.date.localeCompare(b.date)).map(a=>`<p>${esc2(a.date)} — ${esc2(a.title)} ${esc2(a.note||"")}</p>`).join("")||"<p>Ingen</p>"}</div>
+ <h2>Fødeønsker</h2><div class="sec"><p>${esc2(state.birthplan||"—")}</p></div>
+ <h2>Spørsmål til kontroll</h2><div class="sec"><p>${esc2(state.questions||"—")}</p></div>
+ <h2>Nødnumre og kontakter</h2>
+ <div class="sec"><p>Føde: ${esc2(state.phoneFode||"—")}<br>Lege/legevakt: ${esc2(state.phoneLege||"—")}</p>
+ <p>${esc2(state.contacts||"")}</p></div>
+ <h2>Medisiner</h2><div class="sec">${(state.meds||[]).map(m=>`<p>${esc2(m)}</p>`).join("")||"<p>Ingen registrert</p>"}</div>
+ <h2>Siste logger</h2>
+ <div class="sec">${(state.logs||[]).slice(-14).map(l=>`<p>${esc2(l.date)} humør ${l.mood}/5 ${(l.symptoms||[]).join(", ")} ${esc2(l.note||"")}</p>`).join("")||"<p>Ingen</p>"}</div>
+ <h2>Vekt</h2><div class="sec">${(state.weights||[]).map(x=>`<p>${esc2(x.date)}: ${esc2(x.kg)} kg</p>`).join("")||"<p>—</p>"}</div>
+ <h2>Notat</h2><div class="sec"><p>${esc2(state.notes||"—")}</p></div>
+ <p class="muted">Lagret ${new Date().toLocaleString("nb-NO")}</p>
+ </body></html>`;
+ const win=window.open("","_blank");
+ if(!win){alert("Tillat sprettoppvindu for å lage PDF.");return;}
+ win.document.write(html);
+ win.document.close();
+ win.focus();
+ setTimeout(()=>win.print(),300);
+}
+function setTab(t){state.tab=t;save();render()}
+document.querySelectorAll("nav.tabbar button").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+function esc(s){return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
+
+function render(){
+ document.querySelectorAll("nav.tabbar button").forEach(b=>b.classList.toggle("on",b.dataset.tab===state.tab));
+ const root=document.getElementById("app");
+ if(!state.setup){root.innerHTML=viewSetup();bind();return}
+ const views={hjem:viewHome,uke:viewWeek,kunnskap:viewKunnskap,plan:viewPlan,logg:viewLog,lister:viewLists,mer:viewMore};
+ root.innerHTML=(views[state.tab]||viewHome)();
+ bind();
+ const d3=document.getElementById("baby3d"); if(d3) startBaby3D(state.browseWeek||weekNum()||12);
+ hydratePhotos();
+}
+function viewSetup(){return `<header class="app"><div><div class="brand">familien vår</div><h1 class="weekbig">Bare for dere to</h1><p class="setup-lead">En rolig oversikt over ukene, lagret bare på denne telefonen. Ingen konto og ingen sky.</p></div></header>
+<div class="card"><h3>Kom i gang</h3>
+<label>Navn gravid</label><input id="nameA" placeholder="Fornavn"/>
+<label>Navn partner</label><input id="nameB" placeholder="Fornavn"/>
+<label>Termin</label><input id="due" type="date"/>
+<label>Hvem bruker telefonen nå</label><select id="role"><option value="gravid">Jeg er gravid</option><option value="partner">Jeg er partner</option></select>
+<div class="row" style="margin-top:16px"><button class="btn" id="finishsetup">Start appen</button></div>
+<p class="warn">Appen erstatter ikke jordmor, fastlege, fødeavdeling eller Helsenorge. Den oppsummerer offentlig informasjon for dere to.</p></div>`}
+
+function viewHome(){
+ const w=weekNum(); const left=daysLeft();
+ const names=[state.nameA,state.nameB].filter(Boolean).join(" og ");
+ const c=WEEKS[w]||WEEKS[12];
+ const today=state.role==="partner"?c.partner:c.forvent;
+ return `<header class="app"><div><div class="brand">familien vår</div><h1 class="weekbig">${w?"Uke "+w:"Sett termin"}</h1>
+ <div class="sub">${names?names+" · ":""}${left==null?"Sett termin under Mer":(left>=0?left+" dager til termin":Math.abs(left)+" dager over")}</div></div>
+ <span class="pill">${state.role==="partner"?"Partner":"Gravid"}</span></header>
+ <p class="hero-warm">${["Dere klarer mer enn det føles noen dager.","Det er lov å ta det rolig i dag.","En uke av gangen er nok.","Dere er et lag — også når det er stille.","Kroppen jobber, også når du hviler."][(w||12)%5]}</p>
+ <div class="grid2"><div class="stat"><b>${w||"—"}</b>svangerskapsuke</div><div class="stat"><b>${w?Math.min(100,Math.round((w/40)*100))+"%":"—"}</b>mot uke 40</div></div>
+ <div class="grid2" style="margin-top:12px"><div class="stat"><b>${(state.appts||[]).length}</b>avtaler lagret</div><div class="stat"><b>${left==null?"—":(left>=0?left:Math.abs(left))}</b>${left==null?"sett termin":(left>=0?"dager til termin":"dager over")}</div></div>
+ <div class="card" style="margin-top:14px">
+  <h3>Størrelse denne uken</h3>
+  <p>${w?sizePhrase(w)+".":"Sett termin for å se uke og størrelse."}</p>
+  <p class="tiny">Leken størrelsesmetafor — ikke måling fra ultralyd.</p>
+ </div>
+ <div class="card">
+  <h3>Se meg (skjematisk)</h3>
+  <div id="baby3d" style="height:220px;border-radius:18px;background:#1c1413;overflow:hidden"></div>
+  <p class="tiny">Dra for å snu. Ikke ultralyd.</p>
+ </div>
+ <div class="card"><h3>Hilsen fra meg i magen</h3><p>${(HILSEN[w]||HILSEN[12]||"")}</p><p class="tiny">Fiksjon med uke-tema. Ikke et budskap fra ultralyd.</p></div>
+ <div class="card"><h3>Ukas tips (kunnskapsgrunnlag)</h3><p>${UKETIPS[w]||""}</p><p class="tiny">Kortversjon av offentlig råd. Original: Helsenorge / Helsedirektoratet / NAV. Ikke tilpasset din journal.</p></div>
+ <div class="card"><h3>I dag</h3><p>${w?today:"Sett termin for å få uke-innhold."}</p>
+ <p class="tiny">${w?"En konkret retning for dagen — ikke et krav.":""}</p>
+ <div class="row"><button class="btn" data-go="uke">Hele uken</button><button class="btn2" data-go="kunnskap">Kost og næring</button></div></div>
+ <div class="card"><h3>Neste avtale</h3>${nextAppt()}</div>
+ <div class="card"><h3>Hvorfor dette finnes</h3><p>Uke-tekst, Helsenorge-kosthold, mikronæring, sjekkliste, fornuftige innkjøp, logg og partner-spor. Alt lokalt.</p></div>
+ <p class="warn">Appen erstatter ikke jordmor, fastlege, fødeavdeling eller Helsenorge. Ved mindre liv, blødning, vannavgang, sterk hodepine, synsforstyrrelse eller plutselig hevelse: jordmor, føde eller 113 — ikke appen.</p>`
+}
+function nextAppt(){const list=(state.appts||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));const today=new Date().toISOString().slice(0,10);const n=list.find(a=>a.date>=today);if(!n)return `<p class="sub">Ingen avtaler. Legg inn under Mer.</p>`;return `<p><b>${n.date}</b> — ${esc(n.title||"Kontroll")}</p><p class="tiny">${esc(n.note||"")}</p>`}
+
+
+let baby3dRaf=0, baby3dRenderer=null;
+function startBaby3D(week){
+ const el=document.getElementById("baby3d");
+ if(!el || typeof THREE==="undefined"){
+  if(el) el.innerHTML='<p class="tiny" style="padding:16px;color:#f3ebe2">3D lastes fra nettet (three.js). Åpne med dekning første gang.</p>';
+  return;
+ }
+ if(baby3dRaf) cancelAnimationFrame(baby3dRaf);
+ if(baby3dRenderer){try{baby3dRenderer.dispose()}catch(e){}}
+ const w=el.clientWidth||320, h=el.clientHeight||280;
+ const scene=new THREE.Scene();
+ scene.background=new THREE.Color(0x1c1413);
+ const camera=new THREE.PerspectiveCamera(35,w/h,0.1,50);
+ camera.position.set(0,0.35,3.2);
+ const renderer=new THREE.WebGLRenderer({antialias:true});
+ renderer.setSize(w,h); renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+ el.innerHTML=""; 
+ renderer.domElement.style.display="block";
+ renderer.domElement.style.width="100%";
+ renderer.domElement.style.height="100%";
+ renderer.domElement.style.maxWidth="100%";
+ renderer.domElement.style.touchAction="none";
+ renderer.domElement.style.pointerEvents="auto";
+ el.style.position="relative";
+ el.style.zIndex="1";
+ el.appendChild(renderer.domElement);
+ baby3dRenderer=renderer;
+ const light=new THREE.HemisphereLight(0xffe8d6,0x3a2a28,1.1);
+ scene.add(light);
+ const dir=new THREE.DirectionalLight(0xffffff,0.55); dir.position.set(2,3,2); scene.add(dir);
+ const mat=new THREE.MeshPhysicalMaterial({color:0xe8b7a8,roughness:0.45,metalness:0.02,clearcoat:0.2,sheen:0.4,sheenColor:0xf3d0c6});
+ const group=new THREE.Group();
+ const stage=week<=8?1:week<=12?2:week<=20?3:week<=28?4:5;
+ const head=new THREE.Mesh(new THREE.SphereGeometry(stage>=3?0.28:0.22,32,32),mat);
+ head.position.y=stage>=3?0.42:0.28;
+ group.add(head);
+ const body=new THREE.Mesh(new THREE.SphereGeometry(stage>=4?0.32:0.2,32,32),mat);
+ body.scale.set(0.75,stage>=3?1.15:0.9,0.7);
+ body.position.y=stage>=3?0.02:-0.02;
+ group.add(body);
+ if(stage>=2){
+  const armG=new THREE.CapsuleGeometry(0.05,stage>=4?0.28:0.12,6,10);
+  const a1=new THREE.Mesh(armG,mat); a1.position.set(-0.32,0.12,0); a1.rotation.z=0.7; group.add(a1);
+  const a2=a1.clone(); a2.position.x=0.32; a2.rotation.z=-0.7; group.add(a2);
+ }
+ if(stage>=3){
+  const legG=new THREE.CapsuleGeometry(0.055,stage>=5?0.38:0.2,6,10);
+  const l1=new THREE.Mesh(legG,mat); l1.position.set(-0.12,-0.32,0); l1.rotation.z=0.25; group.add(l1);
+  const l2=l1.clone(); l2.position.x=0.12; l2.rotation.z=-0.25; group.add(l2);
+ }
+ if(stage===1){
+  group.scale.setScalar(0.45+week*0.04);
+ } else {
+  group.scale.setScalar(0.7+week*0.018);
+ }
+ scene.add(group);
+ let rotY=0.2, dragging=false, lastX=0;
+ renderer.domElement.style.touchAction="none";
+ renderer.domElement.addEventListener("pointerdown",e=>{dragging=true;lastX=e.clientX});
+ renderer.domElement.addEventListener("pointerup",()=>dragging=false); renderer.domElement.addEventListener("pointercancel",()=>dragging=false); window.addEventListener("pointerup",()=>dragging=false,{passive:true});
+ renderer.domElement.addEventListener("pointermove",e=>{if(!dragging)return;rotY+=(e.clientX-lastX)*0.01;lastX=e.clientX});
+ function tick(){
+  if(!el.isConnected){cancelAnimationFrame(baby3dRaf);return;}
+  if(!dragging) rotY+=0.006;
+  group.rotation.y=rotY;
+  group.rotation.x=0.15;
+  renderer.render(scene,camera);
+  baby3dRaf=requestAnimationFrame(tick);
+ }
+ tick();
+}
+function viewWeek(){
+ const actual=weekNum()||12; const w=state.browseWeek||actual; const c=WEEKS[w]||WEEKS[12];
+ return `<header class="app"><div><div class="brand">Uke for uke ${w!==actual?"(ikke denne uken)":""}</div>
+ <h1 class="weekbig">Uke ${w}</h1><div class="sub">${sizePhrase(w)}</div></div>
+ <div class="row"><button class="btn2" data-browse="-1" aria-label="Forrige uke">−</button><button class="btn2" data-browse="1" aria-label="Neste uke">+</button></div></header>
+ <p class="tiny" style="margin:-6px 0 14px">Leken størrelsesmetafor — ikke måling fra ultralyd. Blaing endrer ikke terminen.</p>
+ <div class="card">
+  <h3>3D — skjematisk uke ${w}</h3>
+  <p class="tiny">Illustrasjon, ikke ultralyd og ikke anatomisk fasit. Dra for å snu. To fingre for zoom på telefon.</p>
+  <div id="baby3d" style="height:280px;border-radius:18px;background:#1c1413;overflow:hidden"></div>
+ </div>
+ <div class="card"><h3>Babyen</h3><p>${c.baby}</p></div>
+ <div class="card"><h3>Hilsen uke ${w}</h3><p>${HILSEN[w]||""}</p></div>
+ <div class="card"><h3>Ukas tips</h3><p>${UKETIPS[w]||""}</p></div>
+ <div class="card"><h3>Dette er vanlig</h3><p>${c.vanlig}</p></div>
+ <div class="card"><h3>Dette kan du forvente</h3><p>${c.forvent}</p></div>
+ <div class="card"><h3>Humør</h3><p>${c.humor}</p></div>
+ <div class="card"><h3>${state.role==="partner"?"Til deg som partner":"Til partneren"}</h3><p>${c.partner}</p></div>
+ <div class="card"><h3>Hensyn — begge veier</h3>
+ <p><b>Til partner:</b> ${c.partner}</p>
+ <p><b>Til den som er gravid:</b> Si behovet i én setning. Partner kan ikke gjette kvalme, redsel eller at du vil være i fred. Takk for det som faktisk ble gjort.</p>
+ <p class="tiny">Mer under Kunnskap → Dere to.</p></div>
+ <div class="card"><h3>Å gjøre rundt denne uken</h3>${weekTasks(w).map((x,i)=>{const id="w"+w+"-"+i;return `<label class="chk"><input type="checkbox" data-chk="${id}" ${state.checks[id]?"checked":""}><span>${x.t}</span></label>`}).join("")}</div>
+ <div class="card"><h3>Innkjøp denne fasen</h3><p>${c.kjop}</p></div>
+ <div class="card"><h3>Kurs</h3><p>${c.kurs}</p></div>
+ <div class="card"><h3>Bok</h3><p>${c.bok}</p></div>`
+}
+
+function viewKunnskap(){
+ const sub=state.kunnskap||"oversikt";
+ const nav=[["oversikt","Oversikt"],["ja","Kan spise"],["nei","Unngå"],["mikro","Mikronæring"],["handling","Gjøre"],["to","Dere to"],["kurs","Kurs"],["sjekk","Sjekkliste"]];
+ const pills=nav.map(([id,l])=>`<button class="pill" data-kun="${id}" style="${sub===id?"background:var(--rose-soft,#f3e2dc);color:var(--ink);border-color:rgba(122,62,69,.22);font-weight:600":""}">${l}</button>`).join("");
+ let body="";
+ if(sub==="oversikt") body=`<div class="card"><h3>Kilder</h3>
+ <p><a href="https://www.helsenorge.no/gravid/kosthold-for-gravide/" target="_blank">Helsenorge — kosthold</a></p>
+ <p><a href="https://www.helsenorge.no/gravid/mat-og-drikke-som-gravide-ikke-bor-spise/" target="_blank">Helsenorge — unngå</a></p>
+ <p><a href="https://www.helsenorge.no/gravid/trening-graviditet-og-fodsel/" target="_blank">Helsenorge — trening</a></p>
+ <p><a href="https://gravidhjelpen.no/" target="_blank">Gravidhjelpen.no</a> — 107 punkter uke for uke. Her er kjernen.</p>
+ <p class="tiny">Du spiser ikke for to. Ekstra energi ca. 100 kcal i 1. trimester, 300 i 2. og 500 i 3.</p></div>`;
+ if(sub==="ja") body=EAT_YES.map(([t,n])=>`<div class="card"><h3>${t}</h3><p>${n}</p></div>`).join("");
+ if(sub==="nei") body=EAT_NO.map(([t,n])=>`<div class="card"><h3>${t}</h3><p>${n}</p></div>`).join("");
+ if(sub==="mikro") body=`<p class="tiny">Tallene er veiledende referanseinntak per dag (Helsenorge / Helsedirektoratet-tradisjon). Porsjoner er omtrentlige. Appen erstatter ikke jordmor. Tablett erstatter ikke mat — og mat erstatter ikke folattablett til uke 12.</p>`+MICRO.map(m=>`<div class="card"><h3>${m.n}</h3><p class="tiny" style="margin:0 0 4px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;color:var(--muted)">Referanseinntak / dag</p><p><b>${m.ref||m.d}</b></p><p class="tiny" style="margin:12px 0 4px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;color:var(--muted)">Hvorfor</p><p>${m.why||m.h}</p><p class="tiny" style="margin:12px 0 4px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;color:var(--muted)">Slik får du nok</p><p>${m.how||m.p}</p></div>`).join("");
+ if(sub==="to") body=TO.map(a=>`<div class="card"><h3>${a.t}</h3><p>${a.n}</p></div>`).join("");
+ if(sub==="handling") body=ACTIONS.map(a=>`<div class="card"><h3>${a.t}</h3><p>${a.n}</p></div>`).join("");
+ if(sub==="kurs") body=COURSES_LONG.map(c=>`<div class="card"><h3>${c.t}</h3><p>${c.n}</p></div>`).join("");
+ if(sub==="sjekk"){const w=weekNum()||12;const now=weekTasks(w);const later=WEEK_TASKS.filter(x=>x.from>w);const earlier=WEEK_TASKS.filter(x=>x.to<w);const block=(title,arr,pref)=>`<div class="card"><h3>${title}</h3><ul class="clean">${arr.map((x,i)=>{const id=pref+"-"+i+"-"+x.t.slice(0,24);return `<li><input type="checkbox" data-chk="${id}" ${state.checks[id]?"checked":""}><span><b>Uke ${x.from}${x.from!==x.to?"–"+x.to:""}.</b> ${x.t}</span></li>`}).join("")}</ul></div>`;body=`<p class="tiny">Uke-for-uke-sjekklisten ligger her (tidligere egen fane). Gravidhjelpen.no har 107 punkter i sitt eget verktøy. Kryss her er deres.</p>${block("Nå",now,"n")}${block("Senere",later,"s")}${block("Tidligere / pågående vaner",earlier,"e")}`+CHECKLIST.map((b,bi)=>`<div class="card"><h3>${b.g}</h3><ul class="clean">${b.items.map((it,ii)=>{const id="old-"+bi+"-"+ii;return `<li><input type="checkbox" data-chk="${id}" ${state.checks[id]?"checked":""}><span>${it}</span></li>`}).join("")}</ul></div>`).join("")}
+ return `<header class="app"><div><div class="brand">Kunnskap</div><h1 class="weekbig">Hvorfor — ikke bare hva</h1></div></header>
+ <div class="pills" style="margin-bottom:8px">${pills}</div>${body}`
+}
+
+function fmtNOK(n){const x=Number(n)||0;return x.toLocaleString("nb-NO",{minimumFractionDigits:0,maximumFractionDigits:0})+" kr"}
+function ymd(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");return y+"-"+m+"-"+day}
+function addDays(d,n){const x=new Date(d.getTime());x.setDate(x.getDate()+n);return x}
+function expandPlanInstances(daysAhead){
+  const today=new Date();today.setHours(12,0,0,0);
+  const end=addDays(today,daysAhead);
+  const out=[];
+  (state.events||[]).forEach(e=>{
+    if(e.active===false) return;
+    const start=parseDate(e.date); if(!start) return;
+    const recur=e.recur||"none";
+    if(recur==="none"){
+      if(start>=today && start<=end) out.push({kind:"event",id:e.id,title:e.title,date:e.date,time:e.time||"",note:e.note||"",recur,active:e.active!==false,src:e});
+      return;
+    }
+    let cur=new Date(start.getTime());
+    let guard=0;
+    while(cur<today && guard<400){
+      if(recur==="weekly") cur=addDays(cur,7);
+      else if(recur==="biweekly") cur=addDays(cur,14);
+      else if(recur==="monthly"){const n=new Date(cur);n.setMonth(n.getMonth()+1);cur=n}
+      else break;
+      guard++;
+    }
+    guard=0;
+    while(cur<=end && guard<80){
+      if(cur>=today){
+        out.push({kind:"event",id:e.id,title:e.title,date:ymd(cur),time:e.time||"",note:e.note||"",recur,active:e.active!==false,src:e,instance:true});
+      }
+      if(recur==="weekly") cur=addDays(cur,7);
+      else if(recur==="biweekly") cur=addDays(cur,14);
+      else if(recur==="monthly"){const n=new Date(cur);n.setMonth(n.getMonth()+1);cur=n}
+      else break;
+      guard++;
+    }
+  });
+  (state.appts||[]).forEach((a,i)=>{
+    const d=parseDate(a.date); if(!d) return;
+    if(d>=today && d<=end) out.push({kind:"appt",id:"appt-"+i,title:a.title||"Avtale",date:a.date,time:"",note:a.note||"",readonly:true});
+  });
+  out.sort((a,b)=>(a.date+(a.time||"")).localeCompare(b.date+(b.time||""))||String(a.title).localeCompare(String(b.title)));
+  return out;
+}
+function recurLabel(r){return ({none:"Ingen",weekly:"Hver uke",biweekly:"Annenhver uke",monthly:"Hver måned"})[r]||"Ingen"}
+function lifeStatusLabel(s){return ({todo:"Ikke startet",doing:"Pågår",done:"Ferdig"})[s]||s}
+
+function viewPlanKalender(){
+  const instances=expandPlanInstances(60);
+  const list=instances.length?instances.map(it=>{
+    const badge=it.kind==="appt"?`<span class="pill" style="padding:4px 10px;font-size:11px">Avtale</span>`:(it.recur&&it.recur!=="none"?`<span class="pill" style="padding:4px 10px;font-size:11px">${recurLabel(it.recur)}</span>`:"");
+    const note=it.kind==="appt"?`<span class="tiny">Fra avtaler under Mer</span>`:`<div class="tiny">${esc(it.note||"")}</div>`;
+    return `<li><div style="flex:1;min-width:0"><b>${esc(it.date)}${it.time?" · "+esc(it.time):""}</b> ${esc(it.title)} ${badge}${note}</div></li>`;
+  }).join(""):"<p class='sub'>Ingen aktiviteter de neste 60 dagene. Legg til noe dere begge trenger å huske.</p>";
+  const editing=state._editEventId?(state.events||[]).find(e=>e.id===state._editEventId):null;
+  const saved=(state.events||[]).map(e=>{
+    const on=e.active!==false;
+    return `<li><div style="flex:1;min-width:0"><b>${esc(e.title)}</b> · ${esc(e.date)}${e.time?" · "+esc(e.time):""} <span class="pill" style="padding:4px 10px;font-size:11px">${on?"Aktiv":"Pauset"} · ${recurLabel(e.recur||"none")}</span><div class="tiny">${esc(e.note||"")}</div>
+    <div class="row"><button class="btn2" data-editevent="${esc(e.id)}">Rediger</button><button class="btn2" data-toggleevent="${esc(e.id)}">${on?"Pause":"Aktiver"}</button><button class="btn2" data-delevent="${esc(e.id)}">Slett</button></div></div></li>`;
+  }).join("")||"<p class='sub'>Ingen lagrede aktiviteter ennå.</p>";
+  return `<div class="card"><h3>${editing?"Rediger aktivitet":"Ny aktivitet"}</h3>
+  <label>Tittel</label><input id="evtitle" value="${esc(editing?editing.title:"")}" placeholder="F.eks. middag med besteforeldre"/>
+  <label>Dato</label><input id="evdate" type="date" value="${esc(editing?editing.date:"")}"/>
+  <label>Tid (valgfritt)</label><input id="evtime" type="time" value="${esc(editing?editing.time||"":"")}"/>
+  <label>Note</label><input id="evnote" value="${esc(editing?editing.note||"":"")}" placeholder="Kort note"/>
+  <label>Gjentakelse</label><select id="evrecur">
+    <option value="none" ${!editing||editing.recur==="none"||!editing.recur?"selected":""}>Ingen</option>
+    <option value="weekly" ${editing&&editing.recur==="weekly"?"selected":""}>Hver uke</option>
+    <option value="biweekly" ${editing&&editing.recur==="biweekly"?"selected":""}>Annenhver uke</option>
+    <option value="monthly" ${editing&&editing.recur==="monthly"?"selected":""}>Hver måned</option>
+  </select>
+  <div class="row" style="margin-top:12px"><button class="btn" id="saveevent">${editing?"Lagre endring":"Legg til"}</button>${editing?`<button class="btn2" id="cancelevent">Avbryt</button>`:""}</div>
+  <p class="tiny">Gjentakelser vises som kommende forekomster. Selve lista lagres ikke eksplodert.</p></div>
+  <div class="card"><h3>Kommende 60 dager</h3><ul class="clean">${list}</ul>
+  <p class="tiny">Graviditetsavtaler vises som «Avtale» (skrivebeskyttet her). Dette er ikke en medisinsk kalender.</p></div>
+  <div class="card"><h3>Lagrede aktiviteter</h3><ul class="clean">${saved}</ul></div>`;
+}
+
+function viewPlanHandle(){
+  const items=state.shopList||[];
+  const list=items.length?items.map(it=>`<li><label class="chk" style="margin:0;flex:1"><input type="checkbox" data-shopitem="${esc(it.id)}" ${it.done?"checked":""}><span style="${it.done?"text-decoration:line-through;opacity:.65":""}">${esc(it.text)}</span></label><button class="btn2" data-delshopitem="${esc(it.id)}">Slett</button></li>`).join(""):"<p class='sub'>Lista er tom. Legg til det dere trenger nå, eller hent faste varer under.</p>";
+  const staples=state.staples||[];
+  const stapHtml=staples.length?staples.map(s=>`<li><span style="flex:1">${esc(s.text)}</span><button class="btn2" data-addstaple="${esc(s.id)}">På lista</button><button class="btn2" data-delstaple="${esc(s.id)}">Fjern</button></li>`).join(""):"<p class='sub'>Ingen faste varer ennå. Ting dere kjøper ofte — melk, bleier, kaffe — kan bo her.</p>";
+  return `<div class="card"><h3>Handleliste nå</h3>
+  <div class="row"><input id="shoptext" placeholder="Ny vare" style="flex:1"><button class="btn" id="addshop">Legg til</button></div>
+  <ul class="clean" style="margin-top:10px">${list}</ul>
+  <div class="row" style="margin-top:8px"><button class="btn2" id="cleardoneshop">Fjern hukede</button></div></div>
+  <div class="card"><h3>Faste varer</h3>
+  <p class="tiny">Lagres selv om dere tømmer handlelista.</p>
+  <div class="row"><input id="stapletext" placeholder="F.eks. melk" style="flex:1"><button class="btn2" id="addstaplebtn">Lagre fast</button></div>
+  <div class="row" style="margin-top:10px"><button class="btn" id="addallstaples">Legg alle faste på lista</button></div>
+  <ul class="clean" style="margin-top:10px">${stapHtml}</ul></div>`;
+}
+
+function viewPlanBudsjett(){
+  const b=state.budget||{income:[],expense:[],month:new Date().toISOString().slice(0,7)};
+  const month=b.month||new Date().toISOString().slice(0,7);
+  const cats=[["","—"],["bolig","Bolig"],["mat","Mat"],["transport","Transport"],["barn","Barn"],["helse","Helse"],["annet","Annet"]];
+  const catOpts=cats.map(([v,l])=>`<option value="${v}">${l}</option>`).join("");
+  const sum=(arr)=>(arr||[]).reduce((a,x)=>a+(Number(x.amount)||0),0);
+  const incSum=sum(b.income), expSum=sum(b.expense), bal=incSum-expSum;
+  const row=(kind,it)=>`<li><div style="flex:1;min-width:0"><b>${esc(it.title)}</b> · ${fmtNOK(it.amount)}${it.category?` <span class="tiny">(${esc(it.category)})</span>`:""}</div><button class="btn2" data-delbud="${kind}:${esc(it.id)}">Slett</button></li>`;
+  return `<div class="card"><h3>Måned</h3>
+  <label>Velg måned</label><input id="budmonth" type="month" value="${esc(month)}"/>
+  <p class="tiny">Enkel oversikt for dere to. Ingen bankkobling og ingen råd utover tallene dere legger inn.</p></div>
+  <div class="grid2"><div class="stat"><b>${fmtNOK(incSum)}</b>inntekt</div><div class="stat"><b>${fmtNOK(expSum)}</b>utgift</div></div>
+  <div class="stat" style="margin:12px 0"><b>${fmtNOK(bal)}</b>${bal>=0?"saldo denne måneden":"underskudd denne måneden"}</div>
+  <div class="card"><h3>Inntekt</h3>
+  <label>Tittel</label><input id="inctitle" placeholder="Lønn, støtte…"/>
+  <label>Beløp (NOK)</label><input id="incamount" type="number" step="1" min="0" placeholder="0"/>
+  <label>Kategori</label><select id="inccat">${catOpts}</select>
+  <div class="row" style="margin-top:10px"><button class="btn2" id="addinc">Legg til inntekt</button></div>
+  <ul class="clean">${(b.income||[]).map(it=>row("income",it)).join("")||"<p class='sub'>Ingen inntekter.</p>"}</ul></div>
+  <div class="card"><h3>Utgift</h3>
+  <label>Tittel</label><input id="exptitle" placeholder="Husleie, mat…"/>
+  <label>Beløp (NOK)</label><input id="expamount" type="number" step="1" min="0" placeholder="0"/>
+  <label>Kategori</label><select id="expcat">${catOpts}</select>
+  <div class="row" style="margin-top:10px"><button class="btn2" id="addexp">Legg til utgift</button></div>
+  <ul class="clean">${(b.expense||[]).map(it=>row("expense",it)).join("")||"<p class='sub'>Ingen utgifter.</p>"}</ul></div>`;
+}
+
+function viewPlanLivsplan(){
+  const items=state.lifePlan||[];
+  const list=items.length?items.map(it=>`<li class="mem-row">${memThumbHtml(it.photoKey,it.photoData)}<div class="mem-body"><b>${esc(it.title)}</b> <span class="pill" style="padding:4px 10px;font-size:11px">${lifeStatusLabel(it.status||"todo")}</span><div class="tiny">${esc(it.when||"")}${it.note?" · "+esc(it.note):""}</div>
+  <div class="row" style="margin-top:6px">
+    <button class="btn2" data-lifestatus="${esc(it.id)}:todo">Ikke startet</button>
+    <button class="btn2" data-lifestatus="${esc(it.id)}:doing">Pågår</button>
+    <button class="btn2" data-lifestatus="${esc(it.id)}:done">Ferdig</button>
+    <button class="btn2" data-editlife="${esc(it.id)}">Rediger</button>
+    <label class="btn2" style="display:inline-flex;align-items:center;cursor:pointer;margin:0">Legg til bilde<input type="file" accept="image/*" capture="environment" data-lifephoto="${esc(it.id)}" class="hidden"/></label>
+    <button class="btn2" data-dellife="${esc(it.id)}">Slett</button>
+  </div></div></li>`).join(""):"<p class='sub'>Ingen mål ennå. Dere kan legge inn det som betyr noe for dere — i deres tempo.</p>";
+  const editing=state._editLifeId?(state.lifePlan||[]).find(x=>x.id===state._editLifeId):null;
+  return `<div class="card"><h3>${editing?"Rediger mål":"Nytt mål eller milepæl"}</h3>
+  <label>Tittel</label><input id="lifetitle" value="${esc(editing?editing.title:"")}" placeholder="F.eks. søke barnehage"/>
+  <label>Når (dato eller periode)</label><input id="lifewhen" value="${esc(editing?editing.when||"":"")}" placeholder="Høsten 2027 / 2026-03-15"/>
+  <label>Status</label><select id="lifestatus">
+    <option value="todo" ${!editing||editing.status==="todo"?"selected":""}>Ikke startet</option>
+    <option value="doing" ${editing&&editing.status==="doing"?"selected":""}>Pågår</option>
+    <option value="done" ${editing&&editing.status==="done"?"selected":""}>Ferdig</option>
+  </select>
+  <label>Note</label><textarea id="lifenote" placeholder="Valgfritt">${esc(editing?editing.note||"":"")}</textarea>
+  <label>Bilde (valgfritt)</label><input id="lifephoto" type="file" accept="image/*" capture="environment"/>
+  ${editing&&(editing.photoKey||editing.photoData)?`<p class="tiny">Dette målet har allerede et bilde. Velg et nytt for å bytte.</p>`:""}
+  <div class="row" style="margin-top:12px"><button class="btn" id="savelife">${editing?"Lagre":"Legg til"}</button>${editing?`<button class="btn2" id="cancellife">Avbryt</button>`:""}</div>
+  <p class="tiny">Forslag til felt: permisjon, barnehage, flytting — bare eksempler. Dere velger selv.</p></div>
+  <div class="card"><h3>Dere to</h3><ul class="clean">${list}</ul></div>`;
+}
+
+function viewPlanTilbakeblikk(){
+  const filter=state._memFilter||"alle";
+  const editing=state._editMemId?(state.memories||[]).find(x=>x.id===state._editMemId):null;
+  let mems=(state.memories||[]).slice();
+  if(filter==="gravid") mems=mems.filter(m=>m.kind==="gravid");
+  else if(filter==="liv") mems=mems.filter(m=>m.kind==="liv");
+  mems.sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const kindLabel=k=>k==="gravid"?"Graviditet":"Livsmål";
+  const memTitles=new Set((state.memories||[]).map(m=>(m.title||"").toLowerCase()));
+  const doneLife=(filter==="gravid"?[]:(state.lifePlan||[]).filter(it=>(it.status||"")==="done"&&!memTitles.has((it.title||"").toLowerCase())));
+  const filters=[["alle","Alle"],["gravid","Graviditet"],["liv","Livsmål"]].map(([id,l])=>`<button class="pill" data-memfilter="${id}" style="${filter===id?"background:var(--rose-soft,#f3e2dc);color:var(--ink);border-color:rgba(122,62,69,.22);font-weight:600":""}">${l}</button>`).join("");
+  const list=mems.length?mems.map(m=>`<li class="mem-row">${memThumbHtml(m.photoKey,m.photoData)}<div class="mem-body"><b>${esc(m.title)}</b> <span class="kind-badge">${kindLabel(m.kind)}</span><div class="tiny">${esc(m.date||"")}${m.note?" · "+esc(m.note):""}</div>
+  <div class="row" style="margin-top:6px">
+    <button class="btn2" data-editmem="${esc(m.id)}">Rediger</button>
+    <button class="btn2" data-delmem="${esc(m.id)}">Slett</button>
+  </div></div></li>`).join(""):`<p class="sub">Ingen milepæler ennå. Hva med den første ultralyden, den positive testen, eller dagen dere flyttet inn — bare eksempler. Legg inn det som betyr noe for dere.</p>`;
+  const secondary=doneLife.length?`<div class="card"><h3>Fullførte livsmål</h3><p class="tiny">Ferdige mål som ikke allerede er lagret som minne.</p><ul class="clean">${doneLife.map(it=>`<li><div style="flex:1;min-width:0"><b>${esc(it.title)}</b> <span class="kind-badge">Livsmål</span><div class="tiny">${esc(it.when||"")}${it.note?" · "+esc(it.note):""}</div></div></li>`).join("")}</ul></div>`:"";
+  const idbWarn=state._idbLimited?`<p class="warn">IndexedDB er ikke tilgjengelig her. Bilder lagres begrenset på telefonen — bare noen få bilder.</p>`:"";
+  return `<div class="card"><h3>Tilbakeblikk</h3>
+  <p>Dette er deres private tilbakeblikk — milepæler og bilder som blir på telefonen. Ingen sky, ingen deling.</p>
+  ${idbWarn}</div>
+  <div class="card"><h3>${editing?"Rediger minne":"Nytt minne"}</h3>
+  <label>Tittel</label><input id="memtitle" value="${esc(editing?editing.title:"")}" placeholder="F.eks. første ultralyd"/>
+  <label>Dato</label><input id="memdate" type="date" value="${esc(editing?editing.date||"":"")}"/>
+  <label>Type</label><select id="memkind">
+    <option value="gravid" ${!editing||editing.kind==="gravid"?"selected":""}>Graviditet</option>
+    <option value="liv" ${editing&&editing.kind==="liv"?"selected":""}>Livsmål</option>
+  </select>
+  <label>Note</label><textarea id="memnote" placeholder="Valgfritt">${esc(editing?editing.note||"":"")}</textarea>
+  <label>Bilde (valgfritt)</label><input id="memphoto" type="file" accept="image/*" capture="environment"/>
+  ${editing&&(editing.photoKey||editing.photoData)?`<p class="tiny">Dette minnet har allerede et bilde. Velg et nytt for å bytte.</p>`:""}
+  <div class="row" style="margin-top:12px"><button class="btn" id="savemem">${editing?"Lagre":"Legg til"}</button>${editing?`<button class="btn2" id="cancelmem">Avbryt</button>`:""}</div></div>
+  <div class="pills" style="margin-bottom:8px">${filters}</div>
+  <div class="card"><h3>Tidslinje</h3><ul class="clean">${list}</ul></div>
+  ${secondary}`;
+}
+
+function viewPlan(){
+  const sub=state.planSub||"kalender";
+  const nav=[["kalender","Kalender"],["handle","Handleliste"],["budsjett","Budsjett"],["livsplan","Livsplan"],["tilbakeblikk","Tilbakeblikk"]];
+  const pills=nav.map(([id,l])=>`<button class="pill" data-plansub="${id}" style="${sub===id?"background:var(--rose-soft,#f3e2dc);color:var(--ink);border-color:rgba(122,62,69,.22);font-weight:600":""}">${l}</button>`).join("");
+  let body="";
+  if(sub==="kalender") body=viewPlanKalender();
+  else if(sub==="handle") body=viewPlanHandle();
+  else if(sub==="budsjett") body=viewPlanBudsjett();
+  else if(sub==="livsplan") body=viewPlanLivsplan();
+  else if(sub==="tilbakeblikk") body=viewPlanTilbakeblikk();
+  else body=viewPlanLivsplan();
+  return `<header class="app"><div><div class="brand">Plan</div><h1 class="weekbig">Felles oversikt</h1><div class="sub">Kalender, handleliste, budsjett, livsmål og tilbakeblikk — lagret bare her.</div></div></header>
+  <div class="pills" style="margin-bottom:8px">${pills}</div>${body}`;
+}
+
+
+function contractionSummary(){
+ const today=new Date().toISOString().slice(0,10);
+ const list=(state.contractions||[]).filter(c=>c.date===today).map(c=>c.t).sort((a,b)=>a-b);
+ if(list.length<2) return list.length?(list.length+" rie i dag"):"Ingen rier logget i dag.";
+ const gaps=[]; for(let i=1;i<list.length;i++) gaps.push(Math.round((list[i]-list[i-1])/60000));
+ return list.length+" rier i dag. Siste intervall ca. "+gaps[gaps.length-1]+" min. Snitt "+Math.round(gaps.reduce((a,b)=>a+b)/gaps.length)+" min. Appen sier ikke om du skal dra.";
+}
+
+
+function viewSjekk(){
+ const w=weekNum()||12;
+ const now=weekTasks(w);
+ const later=WEEK_TASKS.filter(x=>x.from>w);
+ const earlier=WEEK_TASKS.filter(x=>x.to<w);
+ const block=(title,arr,pref)=>`<div class="card"><h3>${title}</h3><ul class="clean">${arr.map((x,i)=>{const id=pref+"-"+i+"-"+x.t.slice(0,24);return `<li><input type="checkbox" data-chk="${id}" ${state.checks[id]?"checked":""}><span><b>Uke ${x.from}${x.from!==x.to?"–"+x.to:""}.</b> ${x.t}</span></li>`}).join("")}</ul></div>`;
+ return `<header class="app"><div><div class="brand">Sjekk</div><h1 class="weekbig">Uke for uke</h1><div class="sub">${now.length} ting hører til uken dere er i. Resten ligger under.</div></div></header>
+ <p class="tiny">Satt sammen etter offentlig svangerskapsomsorg (kontroller, prøver, vaksine, ultralyd) og Gravidhjelpens tema (permisjon, sekk, kurs, jobb). Deres interaktive 107-liste: gravidhjelpen.no. Kryss her er deres.</p>
+ ${block("Nå",now,"n")}
+ ${block("Senere",later,"s")}
+ ${block("Tidligere / pågående vaner",earlier,"e")}`
+}
+function viewLog(){
+
+ const today=new Date().toISOString().slice(0,10);
+ const recent=(state.logs||[]).slice(-10).reverse();
+ return `<header class="app"><div><div class="brand">Logg</div><h1 class="weekbig">Hvordan går det?</h1></div></header>
+ <div class="card"><h3>Humør</h3><div class="moods" id="moods">${["😞","🙁","😐","🙂","😊"].map((m,i)=>`<button data-mood="${i+1}">${m}</button>`).join("")}</div>
+ <label>Symptomer</label><div class="pills" id="symp">${SYMPTOMS.map(s=>`<button class="pill" data-s="${s}">${s}</button>`).join("")}</div>
+ <label>Note</label><textarea id="lognote" placeholder="Bare for dere to"></textarea>
+ <div class="row" style="margin-top:10px"><button class="btn" id="savelog">Lagre ${today}</button></div></div>
+ <div class="card"><h3>Vekt</h3><div class="row"><input id="kg" type="number" step="0.1" placeholder="kg" style="max-width:140px"><button class="btn2" id="savekg">Lagre</button></div>
+ <p class="tiny">${(state.weights||[]).slice(-5).map(x=>x.date+": "+x.kg+" kg").join(" · ")||"Ingen veiinger"}</p>
+ <p class="tiny">Helsenorge: typisk 11,5–16 kg ved normal KMI. Ikke slank. Ikke «spis for to».</p></div>
+ <div class="card"><h3>Rier</h3><p class="tiny">Tid fra start til start. Ring føde ved tvil.</p>
+ <div class="row"><button class="btn" id="contr">Marker rie</button><button class="btn2" id="contrclear">Tøm i dag</button></div>
+ <p class="tiny">${contractionSummary()}</p></div>
+ <div class="card"><h3>Spark i dag</h3><div class="kick" id="kickn">${state.kicks.filter(k=>k.date===today).length}</div>
+ <div class="row"><button class="btn" id="kick">+ spark</button><button class="btn2" id="kickreset">Nullstill</button></div>
+ <p class="tiny">Lær mønsteret. Plutselig mindre liv: kontakt føde. Ikke vent på appen.</p></div>
+ 
+ <div class="card"><h3>Vann i dag</h3>
+ <p class="tiny">Helsenorge: vann som tørstedrikk. Streken er vane, ikke medisinsk mål.</p>
+ <div class="row"><button class="btn" id="water">+ glass</button><button class="btn2" id="water0">Nullstill</button>
+ <span class="pill">${(state.water||[]).filter(x=>x===new Date().toISOString().slice(0,10)).length} glass</span></div></div>
+ <div class="card"><h3>Blodtrykk / SF-mål</h3>
+ <p class="tiny">Skriv av det jordmor måler. Appen tolker det ikke.</p>
+ <div class="row"><input id="bts" placeholder="f.eks. 118/76" style="flex:1"><button class="btn2" id="savebt">Lagre BT</button></div>
+ <div class="row" style="margin-top:8px"><input id="sfn" placeholder="SF-mål cm" style="flex:1"><button class="btn2" id="savesf">Lagre SF</button></div>
+ <p class="tiny">BT: ${(state.bt||[]).slice(-3).map(x=>x.date+" "+x.v).join(" · ")||"ingen"}<br>SF: ${(state.sf||[]).slice(-3).map(x=>x.date+" "+x.v).join(" · ")||"ingen"}</p></div>
+ <div class="card"><h3>Siste logger</h3>${recent.length?recent.map(l=>`<p><b>${l.date}</b> ${l.mood}/5 — ${(l.symptoms||[]).join(", ")}<br><span class="tiny">${esc(l.note||"")}</span></p>`).join(""):"<p class='sub'>Ingen logger ennå.</p>"}</div>`
+}
+
+function viewLists(){
+ const shopHtml=Object.entries(SHOP).map(([k,items])=>`<div class="card"><h3>${k}</h3><ul class="clean">${items.map((it,i)=>{const id=k+"|"+i;return `<li><input type="checkbox" data-shop="${id}" ${state.shop[id]?"checked":""}><span>${it}</span></li>`}).join("")}</ul></div>`).join("");
+ const bagHtml=BAG.map((it,i)=>`<li><input type="checkbox" data-bag="${i}" ${state.bag[i]?"checked":""}><span>${it}</span></li>`).join("");
+ return `<header class="app"><div><div class="brand">Lister</div><h1 class="weekbig">Fornuftige innkjøp</h1></div></header>
+ <div class="card"><h3>Regel</h3><p>Kjøp det som løser et problem dere har nå. Barnet trenger varme, bleie, et trygt sted å ligge og voksne som har spist.</p></div>
+ ${shopHtml}
+ <div class="card"><h3>Sykehussekk</h3><ul class="clean">${bagHtml}</ul></div>
+ <div class="card"><h3>Kurs</h3>${COURSES.map(c=>`<p><b>${c.t}</b><br><span class="tiny">${c.n}</span></p>`).join("")}</div>
+ <div class="card"><h3>Bøker og kilder</h3>${BOOKS.map(c=>`<p><b>${c.t}</b><br><span class="tiny">${c.n}</span></p>`).join("")}</div>
+ <div class="card"><h3>Navneforslag</h3><div class="row"><input id="newname" placeholder="Navn" style="flex:1"><button class="btn2" id="addname">Legg til</button></div>
+ <ul class="clean">${(state.names||[]).map((n,i)=>`<li><span>${esc(n)}</span><button class="btn2" data-delname="${i}">Slett</button></li>`).join("")}</ul></div>`
+}
+
+function viewMore(){
+ return `<header class="app"><div><div class="brand">Mer</div><h1 class="weekbig">Innstillinger</h1></div></header>
+ <div class="card"><label>Navn gravid</label><input id="nameA" value="${esc(state.nameA)}"/><label>Navn partner</label><input id="nameB" value="${esc(state.nameB)}"/>
+ <label>Termin</label><input id="due" type="date" value="${state.due||""}"/>
+ <label>Visning</label><select id="role"><option value="gravid" ${state.role==="gravid"?"selected":""}>Jeg er gravid</option><option value="partner" ${state.role==="partner"?"selected":""}>Jeg er partner</option></select>
+ <div class="row" style="margin-top:12px"><button class="btn" id="saveprof">Lagre</button></div></div>
+ <div class="card"><h3>Avtaler</h3><label>Dato</label><input id="adate" type="date"/><label>Hva</label><input id="atitle" placeholder="Svangerskapskontroll"/>
+ <label>Note</label><input id="anote" placeholder="Jordmor / sted"/>
+ <div class="row" style="margin-top:10px"><button class="btn2" id="addappt">Legg til</button></div>
+ <ul class="clean">${(state.appts||[]).slice().sort((a,b)=>a.date.localeCompare(b.date)).map((a,i)=>`<li><div><b>${a.date}</b> ${esc(a.title)}<div class="tiny">${esc(a.note||"")}</div></div><button class="btn2" data-delappt="${i}">Slett</button></li>`).join("")}</ul></div>
+ <div class="card"><h3>Felles notat</h3><textarea id="notes">${esc(state.notes)}</textarea><div class="row" style="margin-top:8px"><button class="btn2" id="savenotes">Lagre notat</button></div></div>
+ 
+ <div class="card"><h3>Nødnumre</h3>
+ <label>Fødeavdeling</label><input id="phoneFode" value="${esc(state.phoneFode)}" placeholder="Direkte nummer"/>
+ <label>Legevakt / fastlege</label><input id="phoneLege" value="${esc(state.phoneLege)}"/>
+ <p class="tiny">113 ved fare for liv. Mindre liv: føde, ikke vent.</p>
+ <div class="row" style="margin-top:8px"><button class="btn2" id="savenum">Lagre nummer</button></div></div>
+ <div class="card"><h3>Når ringer dere — uten å spørre appen</h3>
+ <p>Mindre liv enn vanlig. Vannavgang. Regelmessige rier som øker. Blødning. Sterk hodepine, synsforstyrrelse, plutselig hevelse i ansikt/hender. Brystsmerter. Feber og påvirket allmenntilstand. Appen diagnostiserer ikke.</p></div>
+ <div class="card"><h3>Fødeønsker</h3>
+ <textarea id="birthplan" placeholder="Lys, stilling, avnavling, hud-mot-hud, hvem som klipper, smertelindring, amming første time...">${esc(state.birthplan)}</textarea>
+ <div class="row" style="margin-top:8px"><button class="btn2" id="savebp">Lagre ønsker</button></div></div>
+ <div class="card"><h3>Spørsmål til neste kontroll</h3>
+ <textarea id="questions">${esc(state.questions)}</textarea>
+ <div class="row" style="margin-top:8px"><button class="btn2" id="saveq">Lagre spørsmål</button></div></div>
+ <div class="card"><h3>Faste medisiner</h3>
+ <div class="row"><input id="medn" placeholder="Navn og dose" style="flex:1"><button class="btn2" id="addmed">Legg til</button></div>
+ <ul class="clean">${(state.meds||[]).map((m,i)=>`<li><span>${esc(m)}</span><button class="btn2" data-delmed="${i}">Slett</button></li>`).join("")}</ul>
+ <p class="tiny">Sjekk tryggmammamedisin.no. Ikke start eller stopp uten fagfolk.</p></div>
+ <div class="card"><h3>Vaksiner i svangerskapet</h3>
+ <ul class="clean">
+  <li><input type="checkbox" data-vax="influensa" ${state.vax&&state.vax.influensa?"checked":""}><span>Influensa når sesongen tilsier det (tilbys gravide)</span></li>
+  <li><input type="checkbox" data-vax="kikhoste" ${state.vax&&state.vax.kikhoste?"checked":""}><span>Kikhoste, ofte tilbud rundt uke 24</span></li>
+  <li><input type="checkbox" data-vax="covid" ${state.vax&&state.vax.covid?"checked":""}><span>Korona etter gjeldende råd</span></li>
+ </ul>
+ <p class="tiny">Hva som tilbys endres. Jordmor har årets liste.</p></div>
+ <div class="card"><h3>Kontakter</h3>
+ <textarea id="contacts" placeholder="Jordmor, føde, helsestasjon, barnefar/medmor, den som passer dyr">${esc(state.contacts)}</textarea>
+ <div class="row" style="margin-top:8px"><button class="btn2" id="savecon">Lagre kontakter</button></div></div>
+ <div class="card"><h3>Data</h3><div class="row"><button class="btn2" id="exp">Eksporter JSON</button><button class="btn" id="pdf">Lagre PDF</button><button class="btn2" id="imp">Importer</button>
+ <input id="file" type="file" accept="application/json" class="hidden"/></div>
+ <p class="tiny">Send JSON til den andre telefonen for manuell synk.</p></div>
+ <p class="warn">Appen erstatter ikke jordmor, fastlege, fødeavdeling eller Helsenorge. Helsenorge og Gravidhjelpen er kildene — appen er et kart, ikke behandleren.</p>`
+}
+
+let mood=3, symp=new Set();
+function bind(){
+ document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>setTab(b.dataset.go));
+ document.querySelectorAll("[data-kun]").forEach(b=>b.onclick=()=>{state.kunnskap=b.dataset.kun;save();render()});
+ document.querySelectorAll("[data-chk]").forEach(cb=>cb.onchange=()=>{state.checks[cb.dataset.chk]=cb.checked;save()});
+ document.querySelectorAll("[data-browse]").forEach(b=>b.onclick=()=>{const actual=weekNum()||12;const cur=state.browseWeek||actual;state.browseWeek=Math.min(42,Math.max(4,cur+Number(b.dataset.browse)));save();render()});
+ const fs=document.getElementById("finishsetup");
+ if(fs) fs.onclick=()=>{state.nameA=document.getElementById("nameA").value;state.nameB=document.getElementById("nameB").value;state.due=document.getElementById("due").value;state.role=document.getElementById("role").value;if(!state.due){alert("Skriv inn termin først.");return}state.setup=true;save();setTab("hjem")};
+ document.querySelectorAll("#moods button").forEach(b=>b.onclick=()=>{mood=Number(b.dataset.mood);document.querySelectorAll("#moods button").forEach(x=>x.classList.toggle("on",x===b))});
+ document.querySelectorAll("#symp button").forEach(b=>b.onclick=()=>{const s=b.dataset.s;if(symp.has(s))symp.delete(s);else symp.add(s);b.style.background=symp.has(s)?"#e7cfd4":""});
+ const sl=document.getElementById("savelog");
+ if(sl) sl.onclick=()=>{state.logs.push({date:new Date().toISOString().slice(0,10),mood,symptoms:[...symp],note:document.getElementById("lognote").value});save();render()};
+ const sk=document.getElementById("savekg");
+ if(sk) sk.onclick=()=>{const kg=document.getElementById("kg").value;if(!kg)return;state.weights.push({date:new Date().toISOString().slice(0,10),kg});save();render()};
+ const k=document.getElementById("kick");
+ if(k) k.onclick=()=>{state.kicks.push({date:new Date().toISOString().slice(0,10),t:Date.now()});save();render()};
+ const kr=document.getElementById("kickreset");
+ if(kr) kr.onclick=()=>{const today=new Date().toISOString().slice(0,10);state.kicks=state.kicks.filter(x=>x.date!==today);save();render()};
+ const contr=document.getElementById("contr");
+ if(contr) contr.onclick=()=>{state.contractions.push({date:new Date().toISOString().slice(0,10),t:Date.now()});save();render()};
+ const cc=document.getElementById("contrclear");
+ if(cc) cc.onclick=()=>{const today=new Date().toISOString().slice(0,10);state.contractions=state.contractions.filter(x=>x.date!==today);save();render()};
+ document.querySelectorAll("[data-shop]").forEach(cb=>cb.onchange=()=>{state.shop[cb.dataset.shop]=cb.checked;save()});
+ document.querySelectorAll("[data-bag]").forEach(cb=>cb.onchange=()=>{state.bag[cb.dataset.bag]=cb.checked;save()});
+ const an=document.getElementById("addname");
+ if(an) an.onclick=()=>{const v=document.getElementById("newname").value.trim();if(!v)return;state.names.push(v);save();render()};
+ document.querySelectorAll("[data-delname]").forEach(b=>b.onclick=()=>{state.names.splice(Number(b.dataset.delname),1);save();render()});
+ const sp=document.getElementById("saveprof");
+ if(sp) sp.onclick=()=>{state.nameA=document.getElementById("nameA").value;state.nameB=document.getElementById("nameB").value;state.due=document.getElementById("due").value;state.role=document.getElementById("role").value;save();setTab("hjem")};
+ const aa=document.getElementById("addappt");
+ if(aa) aa.onclick=()=>{const date=document.getElementById("adate").value;if(!date)return;state.appts.push({date,title:document.getElementById("atitle").value,note:document.getElementById("anote").value});save();render()};
+ document.querySelectorAll("[data-delappt]").forEach(b=>b.onclick=()=>{state.appts.splice(Number(b.dataset.delappt),1);save();render()});
+ const sn=document.getElementById("savenotes");
+ if(sn) sn.onclick=()=>{state.notes=document.getElementById("notes").value;save()};
+ const exp=document.getElementById("exp");
+ if(exp) exp.onclick=()=>{const out=Object.assign({},state);const strip=arr=>(arr||[]).map(x=>{const o=Object.assign({},x);delete o.photoData;return o});out.memories=strip(state.memories);out.lifePlan=strip(state.lifePlan);const nPhoto=(out.memories||[]).filter(m=>m.photoKey).length+(out.lifePlan||[]).filter(m=>m.photoKey).length;out._exportNote="Bilder ligger lokalt (IndexedDB) og er ikke med i denne filen. Antall fotonøkler: "+nPhoto+".";delete out._editMemId;delete out._editLifeId;delete out._editEventId;delete out._memFilter;delete out._idbLimited;delete out._pendingMemFile;const blob=new Blob([JSON.stringify(out,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="ossto-backup.json";a.click()};
+ const pdf=document.getElementById("pdf");
+ if(pdf) pdf.onclick=()=>exportPdf();
+ const file=document.getElementById("file"); const imp=document.getElementById("imp");
+ if(imp) imp.onclick=()=>file.click();
+ if(file) file.onchange=()=>{const f=file.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const raw=JSON.parse(r.result);Object.assign(state,raw);state.budget=Object.assign({},defaults().budget,raw.budget||{});if(!Array.isArray(state.budget.income))state.budget.income=[];if(!Array.isArray(state.budget.expense))state.budget.expense=[];if(!Array.isArray(state.events))state.events=[];if(!Array.isArray(state.staples))state.staples=[];if(!Array.isArray(state.shopList))state.shopList=[];if(!Array.isArray(state.lifePlan))state.lifePlan=[];if(!Array.isArray(state.memories))state.memories=[];save();render()}catch(e){alert("Ugyldig fil")}};r.readAsText(f)};
+ const wa=document.getElementById("water");
+ if(wa) wa.onclick=()=>{state.water=state.water||[];state.water.push(new Date().toISOString().slice(0,10));save();render()};
+ const w0=document.getElementById("water0");
+ if(w0) w0.onclick=()=>{const d=new Date().toISOString().slice(0,10);state.water=(state.water||[]).filter(x=>x!==d);save();render()};
+ const sbt=document.getElementById("savebt");
+ if(sbt) sbt.onclick=()=>{const v=document.getElementById("bts").value.trim();if(!v)return;state.bt.push({date:new Date().toISOString().slice(0,10),v});save();render()};
+ const ssf=document.getElementById("savesf");
+ if(ssf) ssf.onclick=()=>{const v=document.getElementById("sfn").value.trim();if(!v)return;state.sf.push({date:new Date().toISOString().slice(0,10),v});save();render()};
+ const snu=document.getElementById("savenum");
+ if(snu) snu.onclick=()=>{state.phoneFode=document.getElementById("phoneFode").value;state.phoneLege=document.getElementById("phoneLege").value;save()};
+ const sbp=document.getElementById("savebp");
+ if(sbp) sbp.onclick=()=>{state.birthplan=document.getElementById("birthplan").value;save()};
+ const sq=document.getElementById("saveq");
+ if(sq) sq.onclick=()=>{state.questions=document.getElementById("questions").value;save()};
+ const am=document.getElementById("addmed");
+ if(am) am.onclick=()=>{const v=document.getElementById("medn").value.trim();if(!v)return;state.meds.push(v);save();render()};
+ document.querySelectorAll("[data-delmed]").forEach(b=>b.onclick=()=>{state.meds.splice(Number(b.dataset.delmed),1);save();render()});
+ document.querySelectorAll("[data-vax]").forEach(cb=>cb.onchange=()=>{state.vax=state.vax||{};state.vax[cb.dataset.vax]=cb.checked;save()});
+ const sc=document.getElementById("savecon");
+ if(sc) sc.onclick=()=>{state.contacts=document.getElementById("contacts").value;save()};
+ /* Plan tab */
+ document.querySelectorAll("[data-plansub]").forEach(b=>b.onclick=()=>{state.planSub=b.dataset.plansub;state._editEventId=null;state._editLifeId=null;state._editMemId=null;_pendingMemFile=null;_pendingLifeFile=null;save();render()});
+ const saveevent=document.getElementById("saveevent");
+ if(saveevent) saveevent.onclick=()=>{
+  const title=document.getElementById("evtitle").value.trim();
+  const date=document.getElementById("evdate").value;
+  if(!title||!date){alert("Skriv inn tittel og dato.");return}
+  const payload={title,date,time:document.getElementById("evtime").value||"",note:document.getElementById("evnote").value||"",recur:document.getElementById("evrecur").value||"none",weekday:null};
+  state.events=state.events||[];
+  if(state._editEventId){const e=state.events.find(x=>x.id===state._editEventId);if(e) Object.assign(e,payload);state._editEventId=null}
+  else state.events.push(Object.assign({id:uid(),active:true},payload));
+  save();render();
+ };
+ const cancelevent=document.getElementById("cancelevent");
+ if(cancelevent) cancelevent.onclick=()=>{state._editEventId=null;render()};
+ document.querySelectorAll("[data-editevent]").forEach(b=>b.onclick=()=>{state._editEventId=b.dataset.editevent;render()});
+ document.querySelectorAll("[data-delevent]").forEach(b=>b.onclick=()=>{state.events=(state.events||[]).filter(e=>e.id!==b.dataset.delevent);if(state._editEventId===b.dataset.delevent)state._editEventId=null;save();render()});
+ document.querySelectorAll("[data-toggleevent]").forEach(b=>b.onclick=()=>{const e=(state.events||[]).find(x=>x.id===b.dataset.toggleevent);if(e){e.active=e.active===false;save();render()}});
+ const addshop=document.getElementById("addshop");
+ if(addshop) addshop.onclick=()=>{const t=document.getElementById("shoptext").value.trim();if(!t)return;state.shopList=state.shopList||[];state.shopList.push({id:uid(),text:t,done:false});save();render()};
+ document.querySelectorAll("[data-shopitem]").forEach(cb=>cb.onchange=()=>{const it=(state.shopList||[]).find(x=>x.id===cb.dataset.shopitem);if(it){it.done=cb.checked;save()}});
+ document.querySelectorAll("[data-delshopitem]").forEach(b=>b.onclick=()=>{state.shopList=(state.shopList||[]).filter(x=>x.id!==b.dataset.delshopitem);save();render()});
+ const cleardoneshop=document.getElementById("cleardoneshop");
+ if(cleardoneshop) cleardoneshop.onclick=()=>{state.shopList=(state.shopList||[]).filter(x=>!x.done);save();render()};
+ const addstaplebtn=document.getElementById("addstaplebtn");
+ if(addstaplebtn) addstaplebtn.onclick=()=>{const t=document.getElementById("stapletext").value.trim();if(!t)return;state.staples=state.staples||[];state.staples.push({id:uid(),text:t});save();render()};
+ document.querySelectorAll("[data-delstaple]").forEach(b=>b.onclick=()=>{state.staples=(state.staples||[]).filter(x=>x.id!==b.dataset.delstaple);save();render()});
+ document.querySelectorAll("[data-addstaple]").forEach(b=>b.onclick=()=>{const s=(state.staples||[]).find(x=>x.id===b.dataset.addstaple);if(!s)return;state.shopList=state.shopList||[];if(!state.shopList.some(x=>x.text===s.text&&!x.done))state.shopList.push({id:uid(),text:s.text,done:false,fromStaple:true});save();render()});
+ const addallstaples=document.getElementById("addallstaples");
+ if(addallstaples) addallstaples.onclick=()=>{state.shopList=state.shopList||[];(state.staples||[]).forEach(s=>{if(!state.shopList.some(x=>x.text===s.text&&!x.done))state.shopList.push({id:uid(),text:s.text,done:false,fromStaple:true})});save();render()};
+ const budmonth=document.getElementById("budmonth");
+ if(budmonth) budmonth.onchange=()=>{state.budget=state.budget||defaults().budget;state.budget.month=budmonth.value;save();render()};
+ const addinc=document.getElementById("addinc");
+ if(addinc) addinc.onclick=()=>{const title=document.getElementById("inctitle").value.trim();const amount=Number(document.getElementById("incamount").value);if(!title||!(amount>=0)){alert("Skriv inn tittel og beløp.");return}state.budget=state.budget||defaults().budget;state.budget.income=state.budget.income||[];state.budget.income.push({id:uid(),title,amount,category:document.getElementById("inccat").value||""});save();render()};
+ const addexp=document.getElementById("addexp");
+ if(addexp) addexp.onclick=()=>{const title=document.getElementById("exptitle").value.trim();const amount=Number(document.getElementById("expamount").value);if(!title||!(amount>=0)){alert("Skriv inn tittel og beløp.");return}state.budget=state.budget||defaults().budget;state.budget.expense=state.budget.expense||[];state.budget.expense.push({id:uid(),title,amount,category:document.getElementById("expcat").value||""});save();render()};
+ document.querySelectorAll("[data-delbud]").forEach(b=>b.onclick=()=>{const [kind,id]=b.dataset.delbud.split(":");state.budget=state.budget||defaults().budget;if(kind==="income")state.budget.income=(state.budget.income||[]).filter(x=>x.id!==id);else state.budget.expense=(state.budget.expense||[]).filter(x=>x.id!==id);save();render()});
+ const savelife=document.getElementById("savelife");
+ if(savelife) savelife.onclick=()=>{
+  const title=document.getElementById("lifetitle").value.trim();if(!title){alert("Skriv inn en tittel.");return}
+  const payload={title,when:document.getElementById("lifewhen").value.trim(),status:document.getElementById("lifestatus").value||"todo",note:document.getElementById("lifenote").value||""};
+  const fileEl=document.getElementById("lifephoto");
+  const file=(fileEl&&fileEl.files&&fileEl.files[0])||_pendingLifeFile||null;
+  const finish=function(extra){
+    state.lifePlan=state.lifePlan||[];
+    if(state._editLifeId){const it=state.lifePlan.find(x=>x.id===state._editLifeId);if(it){if(extra&&extra.photoKey&&it.photoKey&&it.photoKey!==extra.photoKey)delPhoto(it.photoKey);Object.assign(it,payload,extra||{})}state._editLifeId=null}
+    else state.lifePlan.push(Object.assign({id:uid()},payload,extra||{}));
+    _pendingLifeFile=null;save();render();
+  };
+  if(file){storeCompressedPhoto(file).then(function(res){finish({photoKey:res.photoKey,photoData:res.photoData||undefined})}).catch(function(){alert("Kunne ikke lagre bildet.");finish({})})}
+  else finish({});
+ };
+ const cancellife=document.getElementById("cancellife");
+ if(cancellife) cancellife.onclick=()=>{state._editLifeId=null;_pendingLifeFile=null;render()};
+ document.querySelectorAll("[data-editlife]").forEach(b=>b.onclick=()=>{state._editLifeId=b.dataset.editlife;render()});
+ document.querySelectorAll("[data-dellife]").forEach(b=>b.onclick=()=>{
+  const id=b.dataset.dellife;const it=(state.lifePlan||[]).find(x=>x.id===id);
+  if(it&&it.photoKey)delPhoto(it.photoKey);
+  state.lifePlan=(state.lifePlan||[]).filter(x=>x.id!==id);if(state._editLifeId===id)state._editLifeId=null;save();render();
+ });
+ document.querySelectorAll("[data-lifestatus]").forEach(b=>b.onclick=()=>{const [id,st]=b.dataset.lifestatus.split(":");const it=(state.lifePlan||[]).find(x=>x.id===id);if(it){it.status=st;save();render()}});
+ document.querySelectorAll("[data-lifephoto]").forEach(inp=>inp.onchange=()=>{
+  const f=inp.files&&inp.files[0];if(!f)return;const id=inp.dataset.lifephoto;const it=(state.lifePlan||[]).find(x=>x.id===id);if(!it)return;
+  storeCompressedPhoto(f).then(function(res){if(it.photoKey&&it.photoKey!==res.photoKey)delPhoto(it.photoKey);it.photoKey=res.photoKey;if(res.photoData)it.photoData=res.photoData;else delete it.photoData;save();render()}).catch(function(){alert("Kunne ikke lagre bildet.")});
+ });
+ /* Tilbakeblikk */
+ document.querySelectorAll("[data-memfilter]").forEach(b=>b.onclick=()=>{state._memFilter=b.dataset.memfilter;save();render()});
+ const savemem=document.getElementById("savemem");
+ if(savemem) savemem.onclick=()=>{
+  const title=document.getElementById("memtitle").value.trim();
+  const date=document.getElementById("memdate").value;
+  if(!title||!date){alert("Skriv inn tittel og dato.");return}
+  const payload={title,date,kind:document.getElementById("memkind").value||"gravid",note:document.getElementById("memnote").value||""};
+  const fileEl=document.getElementById("memphoto");
+  const file=(fileEl&&fileEl.files&&fileEl.files[0])||_pendingMemFile||null;
+  const finish=function(extra){
+    state.memories=state.memories||[];
+    if(state._editMemId){const it=state.memories.find(x=>x.id===state._editMemId);if(it){if(extra&&extra.photoKey&&it.photoKey&&it.photoKey!==extra.photoKey)delPhoto(it.photoKey);Object.assign(it,payload,extra||{})}state._editMemId=null}
+    else state.memories.push(Object.assign({id:uid(),photoKey:null},payload,extra||{}));
+    _pendingMemFile=null;save();render();
+  };
+  if(file){storeCompressedPhoto(file).then(function(res){finish({photoKey:res.photoKey,photoData:res.photoData||undefined})}).catch(function(){alert("Kunne ikke lagre bildet.");finish({})})}
+  else finish({});
+ };
+ const cancelmem=document.getElementById("cancelmem");
+ if(cancelmem) cancelmem.onclick=()=>{state._editMemId=null;_pendingMemFile=null;render()};
+ document.querySelectorAll("[data-editmem]").forEach(b=>b.onclick=()=>{state._editMemId=b.dataset.editmem;render()});
+ document.querySelectorAll("[data-delmem]").forEach(b=>b.onclick=()=>{
+  const id=b.dataset.delmem;const it=(state.memories||[]).find(x=>x.id===id);
+  if(it&&it.photoKey)delPhoto(it.photoKey);
+  state.memories=(state.memories||[]).filter(x=>x.id!==id);if(state._editMemId===id)state._editMemId=null;save();render();
+ });
+ document.querySelectorAll("[data-openphoto]").forEach(img=>img.onclick=function(ev){
+  ev.stopPropagation();
+  const key=img.getAttribute("data-photokey")||"";
+  const data=img.getAttribute("data-photodata")||"";
+  if(img.src&&img.src.indexOf("data:")!==0&&img.src.indexOf("blob:")!==0&&!data&&!key)return;
+  photoSrcFor(key||null,data||img.src||null).then(function(src){openPhotoModal(src||img.src)});
+ });
+}
+render();
+</script>
+</body>
+</html>

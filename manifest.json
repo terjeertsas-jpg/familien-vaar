@@ -1,0 +1,10 @@
+{
+  "name": "familien vår",
+  "short_name": "familien",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f3ebe2",
+  "theme_color": "#5c3d4a",
+  "lang": "nb",
+  "description": "Privat offline graviditetsapp for to. Erstatter ikke jordmor eller Helsenorge."
+}
