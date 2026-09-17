@@ -1457,7 +1457,7 @@ function viewHome(){
  </div>
  <div class="card">
   <h3>Se meg (skjematisk)</h3>
-  <div id="baby3d" style="height:300px;border-radius:18px;background:#1c1413;overflow:hidden"></div>
+  <div id="baby3d" style="height:300px;border-radius:18px;background:#1a1010;overflow:hidden"></div>
   <p class="tiny">Dra for å snu. Ikke ultralyd.</p>
  </div>
  <div class="card"><h3>Hilsen fra meg i magen</h3><p>${(HILSEN[w]||HILSEN[12]||"")}</p><p class="tiny">Fiksjon med uke-tema. Ikke et budskap fra ultralyd.</p></div>
@@ -1493,11 +1493,20 @@ function startBaby3D(week){
  if(baby3dRenderer){try{baby3dRenderer.dispose()}catch(e){}}
  const w=el.clientWidth||320, h=el.clientHeight||300;
  const scene=new THREE.Scene();
- scene.background=new THREE.Color(0x1c1413);
+ // Deeper soft womb-like gradient feel (rose-brown, not flat black)
+ scene.background=new THREE.Color(0x1a1010);
+ scene.fog=new THREE.FogExp2(0x1a1010,0.085);
  const camera=new THREE.PerspectiveCamera(32,w/h,0.1,50);
- camera.position.set(0,0.15,2.55);
- const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
- renderer.setSize(w,h); renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+ camera.position.set(0,0.12,2.5);
+ const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:"high-performance"});
+ renderer.setSize(w,h);
+ renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+ if("outputColorSpace" in renderer) renderer.outputColorSpace=THREE.SRGBColorSpace;
+ else if("outputEncoding" in renderer) renderer.outputEncoding=THREE.sRGBEncoding;
+ renderer.toneMapping=THREE.ACESFilmicToneMapping;
+ renderer.toneMappingExposure=1.05;
+ if("physicallyCorrectLights" in renderer) renderer.physicallyCorrectLights=true;
+ renderer.shadowMap.enabled=false;
  el.innerHTML="";
  renderer.domElement.style.display="block";
  renderer.domElement.style.width="100%";
@@ -1507,104 +1516,197 @@ function startBaby3D(week){
  renderer.domElement.style.pointerEvents="auto";
  el.style.position="relative";
  el.style.zIndex="1";
+ // CSS radial womb wash behind canvas (soft, not flat)
+ el.style.background="radial-gradient(ellipse at 50% 42%, #3a2420 0%, #241616 55%, #140c0c 100%)";
  el.appendChild(renderer.domElement);
  baby3dRenderer=renderer;
- const hemi=new THREE.HemisphereLight(0xffe8d6,0x3a2a28,1.05);
+
+ // Soft HDR-like lighting: hemi + key + warm fill + rim
+ const hemi=new THREE.HemisphereLight(0xffe4d4,0x2e1c1a,0.85);
  scene.add(hemi);
- const key=new THREE.DirectionalLight(0xfff0e6,0.7); key.position.set(2.2,3.2,2.4); scene.add(key);
- const fill=new THREE.DirectionalLight(0xffc9b5,0.28); fill.position.set(-2.5,1.2,-1.5); scene.add(fill);
- const rim=new THREE.DirectionalLight(0xffd8c8,0.22); rim.position.set(0.5,1.5,-2.8); scene.add(rim);
+ const key=new THREE.DirectionalLight(0xfff2e8,0.95);
+ key.position.set(2.0,3.4,2.6); scene.add(key);
+ const fill=new THREE.DirectionalLight(0xffb8a0,0.38);
+ fill.position.set(-2.8,1.0,-1.2); scene.add(fill);
+ const rim=new THREE.DirectionalLight(0xffd0c0,0.45);
+ rim.position.set(0.3,1.8,-3.0); scene.add(rim);
+ const bounce=new THREE.DirectionalLight(0xc87868,0.12);
+ bounce.position.set(0,-2.5,0.5); scene.add(bounce);
+
+ // Procedural soft env (CanvasTexture → PMREM) — no external assets
+ try{
+  const c=document.createElement("canvas"); c.width=256; c.height=128;
+  const ctx=c.getContext("2d");
+  const g=ctx.createLinearGradient(0,0,0,128);
+  g.addColorStop(0,"#5a3a32"); g.addColorStop(0.35,"#3a2420");
+  g.addColorStop(0.7,"#241614"); g.addColorStop(1,"#120a0a");
+  ctx.fillStyle=g; ctx.fillRect(0,0,256,128);
+  // soft warm highlight blob (key side)
+  const rg=ctx.createRadialGradient(190,40,4,190,40,70);
+  rg.addColorStop(0,"rgba(255,220,200,0.55)"); rg.addColorStop(1,"rgba(255,200,180,0)");
+  ctx.fillStyle=rg; ctx.fillRect(0,0,256,128);
+  const eq=new THREE.CanvasTexture(c);
+  eq.mapping=THREE.EquirectangularReflectionMapping;
+  eq.colorSpace=THREE.SRGBColorSpace;
+  const pmrem=new THREE.PMREMGenerator(renderer);
+  const envRT=pmrem.fromEquirectangular(eq);
+  scene.environment=envRT.texture;
+  baby3dDisposables.push(eq,envRT,pmrem);
+  eq.dispose();
+ }catch(e){/* env optional */}
+
+ // Skin-like MeshPhysicalMaterial — warm peach, SSS feel, no harsh plastic
  const skin=new THREE.MeshPhysicalMaterial({
-  color:0xe8b7a8, roughness:0.42, metalness:0.02, clearcoat:0.18,
-  sheen:0.45, sheenColor:0xf3d0c6, transmission:0.04, thickness:0.35
+  color:0xf0c4b0, roughness:0.42, metalness:0.0,
+  clearcoat:0.12, clearcoatRoughness:0.55,
+  sheen:0.55, sheenRoughness:0.65, sheenColor:0xf8d8cc,
+  transmission:0.12, thickness:0.55,
+  attenuationColor:0xe8a090, attenuationDistance:0.85,
+  ior:1.35, envMapIntensity:0.55
  });
  const skinSoft=skin.clone();
- skinSoft.color=new THREE.Color(0xeab09f);
- skinSoft.roughness=0.5;
+ skinSoft.color=new THREE.Color(0xedb8a4);
+ skinSoft.roughness=0.48;
+ skinSoft.transmission=0.14;
+ skinSoft.thickness=0.7;
+ skinSoft.attenuationColor=new THREE.Color(0xe09888);
+ const skinCheek=skin.clone();
+ skinCheek.color=new THREE.Color(0xe8a898);
+ skinCheek.roughness=0.4;
+ skinCheek.sheen=0.7;
  const yolkMat=new THREE.MeshPhysicalMaterial({
-  color:0xd4a574, roughness:0.35, metalness:0.0, transparent:true, opacity:0.55,
-  transmission:0.25, thickness:0.4, sheen:0.2, sheenColor:0xf0d0a0
+  color:0xd4a574, roughness:0.32, metalness:0.0, transparent:true, opacity:0.5,
+  transmission:0.35, thickness:0.5, sheen:0.25, sheenColor:0xf0d0a0,
+  attenuationColor:0xc89050, attenuationDistance:0.6
  });
- baby3dDisposables.push(skin,skinSoft,yolkMat);
+ baby3dDisposables.push(skin,skinSoft,skinCheek,yolkMat);
  const track=o=>{baby3dDisposables.push(o); return o};
  const mesh=(geo,mat)=>{const m=new THREE.Mesh(track(geo),mat); return m;};
  const stage=week<=8?1:week<=12?2:week<=20?3:week<=28?4:5;
  const group=new THREE.Group();
- const headR=stage===1?0.26:stage===2?0.28:stage===3?0.30:stage===4?0.29:0.28;
- const head=mesh(new THREE.SphereGeometry(headR,40,40),skin);
- head.position.set(0.06,0.38,0.08);
- head.scale.set(1.05,0.95,1.0);
+
+ // —— Head (smoother, slight asymmetry, stage proportions) ——
+ const headR=stage===1?0.27:stage===2?0.29:stage===3?0.305:stage===4?0.29:0.275;
+ const head=mesh(new THREE.SphereGeometry(headR,64,64),skin);
+ // fetal: larger cranium / slightly flattened face side
+ head.position.set(0.07+stage*0.002, stage<=2?0.40:0.36, 0.06);
+ head.scale.set(1.08,0.92+(stage>=4?0.04:0),0.98);
  group.add(head);
- // torso: tapered / C-curve feel via scaled sphere + slight bend of child parts
- const torsoR=stage<=2?0.16:stage===3?0.20:stage===4?0.24:0.26;
- const torso=mesh(new THREE.SphereGeometry(torsoR,36,36),skinSoft);
- const torsoY=stage<=2?-0.02:0.0;
- torso.position.set(-0.02,torsoY,0);
- torso.scale.set(stage<=2?0.72:0.78, stage<=2?1.05:1.2, stage<=2?0.68:0.82);
+ // soft cheek / face mass (hides sphere seam, mild asymmetry)
+ if(stage>=2){
+  const cheek=mesh(new THREE.SphereGeometry(headR*0.42,40,40),skinCheek);
+  cheek.position.set(0.14,0.30,0.16);
+  cheek.scale.set(1.15,0.85,0.9);
+  group.add(cheek);
+ }
+
+ // —— Torso: LatheGeometry C-curve / pear profile (fewer obvious seams) ——
+ const torsoLen=stage<=2?0.42:stage===3?0.52:stage===4?0.60:0.66;
+ const torsoMaxR=stage<=2?0.15:stage===3?0.19:stage===4?0.23:0.25;
+ const lathePts=[];
+ for(let i=0;i<=20;i++){
+  const t=i/20;
+  // pear: narrow near head, fuller mid/lower; slight fetal taper
+  const flare=Math.sin(t*Math.PI)*0.92+0.08;
+  const lowerBias=0.75+0.35*Math.pow(t,1.15);
+  const r=torsoMaxR*flare*lowerBias*(stage===1?0.85:1);
+  lathePts.push(new THREE.Vector2(Math.max(0.02,r),(0.5-t)*torsoLen));
+ }
+ const torso=mesh(new THREE.LatheGeometry(lathePts,48),skinSoft);
+ torso.position.set(-0.015, stage<=2?0.02:-0.02, 0.01);
+ torso.rotation.z=0.18+(stage<=2?0.12:0.04); // C-curve lean
+ torso.rotation.x=0.08;
+ // slight left-right asymmetry
+ torso.scale.set(0.96,1.0,0.92);
  group.add(torso);
- // soft belly bulge later stages
- if(stage>=4){
-  const belly=mesh(new THREE.SphereGeometry(stage>=5?0.16:0.13,28,28),skinSoft);
-  belly.position.set(0.02,-0.06,0.12);
-  belly.scale.set(1.1,0.9,0.95);
+ // nest overlapping soft mass at neck/shoulder join (blend visually)
+ const neck=mesh(new THREE.SphereGeometry(torsoMaxR*0.55,40,40),skin);
+ neck.position.set(0.02, head.position.y-headR*0.55, 0.04);
+ neck.scale.set(1.1,0.7,0.95);
+ group.add(neck);
+ // soft belly bulge later stages (nested same material)
+ if(stage>=3){
+  const bellyR=stage>=5?0.17:stage>=4?0.14:0.11;
+  const belly=mesh(new THREE.SphereGeometry(bellyR,48,48),skinSoft);
+  belly.position.set(0.03,-0.04-(stage-3)*0.02,0.11+stage*0.008);
+  belly.scale.set(1.15,0.88,1.0);
   group.add(belly);
  }
- // limb helper
+ // hip / lower nest for limb joins
+ if(stage>=2){
+  const hip=mesh(new THREE.SphereGeometry(torsoMaxR*0.7,40,40),skinSoft);
+  hip.position.set(-0.01,-torsoLen*0.38,0.02);
+  hip.scale.set(1.05,0.75,0.9);
+  group.add(hip);
+ }
+
+ // limb helper — higher segment capsules, shared materials
  function addLimb(rad,len,pos,rot,mat){
-  const g=new THREE.CapsuleGeometry(rad,len,6,12);
+  const g=new THREE.CapsuleGeometry(rad,len,10,20);
   const m=mesh(g,mat||skin);
   m.position.set(pos[0],pos[1],pos[2]);
   m.rotation.set(rot[0],rot[1],rot[2]);
   group.add(m);
   return m;
  }
- if(stage===1){
-  // tiny limb buds
-  addLimb(0.035,0.04,[-0.18,0.08,0.04],[0,0,1.1]);
-  addLimb(0.035,0.04,[0.16,0.06,0.04],[0,0,-1.1]);
-  addLimb(0.03,0.03,[-0.08,-0.18,0.02],[0.4,0,0.5]);
-  addLimb(0.03,0.03,[0.08,-0.18,0.02],[0.4,0,-0.5]);
-  // yolk sac nearby
-  const yolk=mesh(new THREE.SphereGeometry(0.09,24,24),yolkMat);
-  yolk.position.set(-0.42,-0.08,-0.15);
-  group.add(yolk);
-  group.rotation.z=0.55;
-  group.rotation.x=0.35;
- } else if(stage===2){
-  addLimb(0.045,0.10,[-0.26,0.10,0.06],[0.2,0,0.95]);
-  addLimb(0.045,0.10,[0.24,0.08,0.06],[0.2,0,-0.95]);
-  addLimb(0.04,0.08,[-0.10,-0.26,0.04],[0.55,0,0.35]);
-  addLimb(0.04,0.08,[0.10,-0.26,0.04],[0.55,0,-0.35]);
-  group.rotation.z=0.42;
-  group.rotation.x=0.28;
- } else if(stage===3){
-  addLimb(0.048,0.18,[-0.30,0.12,0.08],[0.35,0.1,0.85]);
-  addLimb(0.048,0.18,[0.28,0.10,0.08],[0.35,-0.1,-0.85]);
-  addLimb(0.052,0.22,[-0.12,-0.34,0.06],[0.65,0.05,0.28]);
-  addLimb(0.052,0.22,[0.12,-0.34,0.06],[0.65,-0.05,-0.28]);
-  group.rotation.z=0.32;
-  group.rotation.x=0.22;
- } else if(stage===4){
-  addLimb(0.052,0.26,[-0.32,0.10,0.10],[0.4,0.15,0.75]);
-  addLimb(0.052,0.26,[0.30,0.08,0.10],[0.4,-0.15,-0.75]);
-  addLimb(0.055,0.30,[-0.13,-0.38,0.08],[0.7,0.08,0.22]);
-  addLimb(0.055,0.30,[0.13,-0.38,0.08],[0.7,-0.08,-0.22]);
-  group.rotation.z=0.22;
-  group.rotation.x=0.18;
- } else {
-  addLimb(0.058,0.32,[-0.34,0.08,0.12],[0.45,0.2,0.7]);
-  addLimb(0.058,0.32,[0.32,0.06,0.12],[0.45,-0.2,-0.7]);
-  addLimb(0.06,0.36,[-0.14,-0.42,0.10],[0.75,0.1,0.18]);
-  addLimb(0.06,0.36,[0.14,-0.42,0.10],[0.75,-0.1,-0.18]);
-  group.rotation.z=0.16;
-  group.rotation.x=0.14;
+ // joint soft sphere to hide capsule ends
+ function addJoint(rad,pos,mat){
+  const j=mesh(new THREE.SphereGeometry(rad,32,32),mat||skin);
+  j.position.set(pos[0],pos[1],pos[2]);
+  group.add(j);
+  return j;
  }
- // scale by stage / week so model fills frame
+
+ if(stage===1){
+  // tiny limb buds — curled embryo
+  addLimb(0.038,0.045,[-0.17,0.10,0.05],[0.15,0.2,1.15]);
+  addLimb(0.036,0.042,[0.15,0.08,0.06],[0.2,-0.15,-1.05]);
+  addLimb(0.032,0.035,[-0.07,-0.16,0.04],[0.55,0.1,0.55]);
+  addLimb(0.031,0.033,[0.09,-0.15,0.05],[0.5,-0.1,-0.48]);
+  const yolk=mesh(new THREE.SphereGeometry(0.095,40,40),yolkMat);
+  yolk.position.set(-0.44,-0.06,-0.14);
+  group.add(yolk);
+  group.rotation.z=0.58; group.rotation.x=0.38;
+ } else if(stage===2){
+  addLimb(0.046,0.11,[-0.25,0.12,0.08],[0.35,0.15,1.0]);
+  addLimb(0.044,0.10,[0.23,0.09,0.09],[0.4,-0.12,-0.92]);
+  addJoint(0.05,[-0.22,0.16,0.06]); addJoint(0.048,[0.20,0.14,0.07]);
+  addLimb(0.042,0.09,[-0.09,-0.24,0.06],[0.7,0.08,0.4]);
+  addLimb(0.041,0.088,[0.11,-0.23,0.07],[0.65,-0.06,-0.38]);
+  addJoint(0.048,[-0.08,-0.18,0.05],skinSoft); addJoint(0.046,[0.10,-0.17,0.06],skinSoft);
+  group.rotation.z=0.44; group.rotation.x=0.30;
+ } else if(stage===3){
+  addLimb(0.05,0.19,[-0.29,0.14,0.10],[0.45,0.2,0.88]);
+  addLimb(0.048,0.18,[0.27,0.11,0.11],[0.5,-0.18,-0.82]);
+  addJoint(0.055,[-0.24,0.20,0.08]); addJoint(0.052,[0.22,0.17,0.09]);
+  addLimb(0.054,0.24,[-0.11,-0.32,0.08],[0.78,0.1,0.3]);
+  addLimb(0.052,0.23,[0.13,-0.31,0.09],[0.72,-0.08,-0.28]);
+  addJoint(0.058,[-0.10,-0.22,0.06],skinSoft); addJoint(0.056,[0.12,-0.21,0.07],skinSoft);
+  group.rotation.z=0.34; group.rotation.x=0.24;
+ } else if(stage===4){
+  addLimb(0.054,0.27,[-0.31,0.12,0.12],[0.5,0.22,0.78]);
+  addLimb(0.052,0.26,[0.29,0.09,0.13],[0.55,-0.2,-0.72]);
+  addJoint(0.058,[-0.26,0.18,0.10]); addJoint(0.055,[0.24,0.15,0.11]);
+  addLimb(0.057,0.32,[-0.12,-0.36,0.10],[0.82,0.12,0.24]);
+  addLimb(0.055,0.31,[0.14,-0.35,0.11],[0.78,-0.1,-0.22]);
+  addJoint(0.062,[-0.11,-0.24,0.08],skinSoft); addJoint(0.06,[0.13,-0.23,0.09],skinSoft);
+  group.rotation.z=0.24; group.rotation.x=0.18;
+ } else {
+  addLimb(0.06,0.33,[-0.33,0.10,0.14],[0.55,0.25,0.72]);
+  addLimb(0.058,0.32,[0.31,0.07,0.15],[0.58,-0.22,-0.68]);
+  addJoint(0.062,[-0.28,0.16,0.12]); addJoint(0.06,[0.26,0.13,0.13]);
+  addLimb(0.062,0.38,[-0.13,-0.40,0.12],[0.88,0.12,0.2]);
+  addLimb(0.06,0.37,[0.15,-0.39,0.13],[0.84,-0.1,-0.18]);
+  addJoint(0.068,[-0.12,-0.26,0.10],skinSoft); addJoint(0.066,[0.14,-0.25,0.11],skinSoft);
+  group.rotation.z=0.18; group.rotation.x=0.14;
+ }
+
  const base=stage===1?0.95:stage===2?1.05:stage===3?1.12:stage===4?1.18:1.22;
  const weekBoost=stage===1?(week*0.02):Math.min(0.25,(week-8)*0.008);
  group.scale.setScalar(base+weekBoost);
  group.position.y=stage<=2?-0.05:-0.08;
  scene.add(group);
+
  let rotY=0.25, dragging=false, lastX=0, t0=performance.now();
  renderer.domElement.addEventListener("pointerdown",e=>{dragging=true;lastX=e.clientX; try{renderer.domElement.setPointerCapture(e.pointerId)}catch(_){}});
  renderer.domElement.addEventListener("pointerup",e=>{dragging=false; try{renderer.domElement.releasePointerCapture(e.pointerId)}catch(_){}});
@@ -1616,7 +1718,6 @@ function startBaby3D(week){
   const t=(now-t0)/1000;
   if(!dragging) rotY+=0.005;
   group.rotation.y=rotY;
-  // gentle idle sway on top of stage curl
   group.rotation.x=(stage<=2?0.35:0.18)+Math.sin(t*0.7)*0.04;
   group.position.y=(-0.06)+Math.sin(t*0.9)*0.02;
   renderer.render(scene,camera);
@@ -1637,7 +1738,7 @@ function viewWeek(){
  <div class="card">
   <h3>3D — skjematisk uke ${w}</h3>
   <p class="tiny">Illustrasjon, ikke ultralyd og ikke anatomisk fasit. Dra for å snu. To fingre for zoom på telefon.</p>
-  <div id="baby3d" style="height:320px;border-radius:18px;background:#1c1413;overflow:hidden"></div>
+  <div id="baby3d" style="height:320px;border-radius:18px;background:#1a1010;overflow:hidden"></div>
  </div>
  <div class="card"><h3>Babyen</h3><p>${c.baby}</p></div>
  <div class="card"><h3>Hilsen uke ${w}</h3><p>${HILSEN[w]||""}</p></div>
