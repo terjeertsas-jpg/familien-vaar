@@ -2,13 +2,14 @@
 <html lang="no">
 <head>
 <meta charset="UTF-8"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline' https://unpkg.com https://www.gstatic.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://unpkg.com https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://firebase.googleapis.com https://firebaseinstallations.googleapis.com; worker-src blob: 'self'; frame-src 'none'; object-src 'none'; base-uri 'self';"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline' https://unpkg.com https://www.gstatic.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://unpkg.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://*.googleapis.com https://firebase.googleapis.com https://firebaseinstallations.googleapis.com; worker-src blob: 'self'; frame-src 'none'; object-src 'none'; base-uri 'self';"/>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <meta name="theme-color" content="#5c3a36"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="familien vår"/>
 <title>familien vår</title>
+<meta name="app-build" content="sync-fix-1"/>
 <link rel="manifest" href="manifest.json"/>
 <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -770,7 +771,12 @@ function load(){
     if(!Array.isArray(s.lifePlan))s.lifePlan=[];
     if(!Array.isArray(s.memories))s.memories=[];if(!Array.isArray(s.supplements))s.supplements=[];
     if(!s.planSub||!["kalender","handle","budsjett","livsplan","tilbakeblikk"].includes(s.planSub))s.planSub="kalender";
-    if(window.__FIREBASE__ && typeof window.__FIREBASE__==="object" && !s.firebaseConfig) s.firebaseConfig=window.__FIREBASE__;
+    (function(){
+      var emb=window.__FIREBASE__;
+      var cur=s.firebaseConfig;
+      var bad=!cur||typeof cur!=="object"||!cur.apiKey||cur.apiKey==="..."||String(cur.apiKey).length<10||!cur.databaseURL||String(cur.databaseURL).indexOf("http")!==0;
+      if(emb&&typeof emb==="object"&&emb.apiKey&&bad) s.firebaseConfig=emb;
+    })();
     if(s.firebaseConfig && typeof s.firebaseConfig!=="object") s.firebaseConfig=null;
     if(typeof s.syncCode!=="string") s.syncCode="";
     if(typeof s.syncEnabled!=="boolean") s.syncEnabled=!!s.syncCode;
@@ -950,8 +956,9 @@ function genFamilyCode(){
   return out;
 }
 function getFirebaseConfig(){
-  if(state.firebaseConfig && typeof state.firebaseConfig==="object" && state.firebaseConfig.apiKey) return state.firebaseConfig;
-  if(window.__FIREBASE__ && typeof window.__FIREBASE__==="object" && window.__FIREBASE__.apiKey) return window.__FIREBASE__;
+  function ok(c){return c&&typeof c==="object"&&c.apiKey&&String(c.apiKey).length>10&&c.databaseURL&&String(c.databaseURL).indexOf("http")===0}
+  if(ok(state.firebaseConfig)) return state.firebaseConfig;
+  if(ok(window.__FIREBASE__)){ state.firebaseConfig=window.__FIREBASE__; return state.firebaseConfig; }
   return null;
 }
 function stripEphemeral(src){
@@ -1105,7 +1112,7 @@ function startSyncListener(){
   _fbUnsub=function(){ ref.off("value", handler); };
 }
 function createFamilySync(){
-  if(!getFirebaseConfig()){ alert("Lim inn Firebase-config først (Mer → Felles synk)."); return; }
+  if(!getFirebaseConfig()){ alert("Firebase-config mangler. Hard-refresh appen (lukk og åpne på nytt), eller lim inn config under."); return; }
   if(!ensureFirebase()){ alert(_syncStatusMsg||"Firebase er ikke klar."); return; }
   const code=genFamilyCode();
   state.syncCode=code;
@@ -1135,7 +1142,7 @@ function createFamilySync(){
 function joinFamilySync(rawCode){
   const code=String(rawCode||"").replace(/[^A-Za-z0-9]/g,"").toUpperCase();
   if(code.length<6){ alert("Koden skal være minst 6 tegn (anbefalt 8)."); return; }
-  if(!getFirebaseConfig()){ alert("Lim inn Firebase-config først."); return; }
+  if(!getFirebaseConfig()){ alert("Firebase-config mangler. Hard-refresh appen, eller lim inn config under."); return; }
   if(!ensureFirebase()){ alert(_syncStatusMsg||"Firebase er ikke klar."); return; }
   const ref=familyRef(code);
   ref.once("value").then(function(snap){
@@ -1209,7 +1216,7 @@ function syncStatusHtml(){
   return `<div class="card" id="syncCard"><h3>Felles synk</h3>
  <p><b>Status:</b> ${on?"På":"Av"}${on?" · "+esc(code):""}${cfgOk?"":" · mangler Firebase-config"}</p>
  ${_syncStatusMsg?`<p class="tiny">${esc(_syncStatusMsg)}</p>`:""}
- <p class="tiny"><b>Slik gjør dere det:</b> 1) Terje lager Firebase-prosjekt med Realtime Database. 2) Begge limer inn samme config under. 3) Én trykker «Opprett familiekode». 4) Den andre limer inn koden og trykker «Koble til». Da deler dere live state.</p>
+ <p class="tiny"><b>Slik gjør dere det:</b> Firebase er allerede koblet i appen. 1) Hard-refresh hvis noe feiler. 2) Én trykker «Opprett familiekode». 3) Den andre limer inn koden og trykker «Koble til». Da deler dere live state. </p>
  <p class="tiny">Bilder lagret i IndexedDB (photoKey) blir <b>på telefonen</b>. Metadata synkes. Unngå store base64-bilder i synk.</p>
  <label>Firebase config (JSON)</label>
  <textarea id="fbconfig" rows="6" placeholder='{"apiKey":"...","authDomain":"...","databaseURL":"https://....firebaseio.com","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}'>${esc(cfg?JSON.stringify(cfg,null,2):"")}</textarea>
