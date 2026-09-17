@@ -744,7 +744,7 @@ function saveProfileIdb(slim){
       try{
         const tx=db.transaction("photos","readwrite");
         tx.objectStore("photos").put({
-          setup:!!slim.setup, nameA:slim.nameA||"", nameB:slim.nameB||"", due:slim.due||"", role:slim.role||"gravid", savedAt:Date.now()
+          setup:!!slim.setup, nameA:slim.nameA||"", nameB:slim.nameB||"", due:slim.due||"", role:slim.role||"gravid", notes:slim.notes||"", savedAt:Date.now()
         }, "profile");
         tx.oncomplete=function(){resolve()};
         tx.onerror=function(){reject(tx.error)};
@@ -783,7 +783,7 @@ function save(){
     // Durable profile backup (survives some WebView quirks better when paired with IDB)
     try{
       localStorage.setItem(KEY+".profile", JSON.stringify({
-        setup:!!slim.setup, nameA:slim.nameA||"", nameB:slim.nameB||"", due:slim.due||"", role:slim.role||"gravid", savedAt:Date.now()
+        setup:!!slim.setup, nameA:slim.nameA||"", nameB:slim.nameB||"", due:slim.due||"", role:slim.role||"gravid", notes:slim.notes||"", savedAt:Date.now()
       }));
     }catch(e){}
     saveProfileIdb(slim).catch(function(){});
@@ -1006,11 +1006,15 @@ function viewHome(){
  <div class="card"><h3>I dag</h3><p>${w?today:"Sett termin for å få uke-innhold."}</p>
  <p class="tiny">${w?"En konkret retning for dagen — ikke et krav.":""}</p>
  <div class="row"><button class="btn" data-go="uke">Hele uken</button><button class="btn2" data-go="kunnskap">Kost og næring</button></div></div>
- <div class="card"><h3>Neste avtale</h3>${nextAppt()}</div>
+ <div class="card" id="goAppts" role="button" tabindex="0" style="cursor:pointer">
+  <h3>Avtaler</h3>
+  ${nextAppt()}
+  <p class="tiny" style="margin-top:8px">Trykk for å legge til eller redigere (også daglige avtaler).</p>
+ </div>
  <div class="card"><h3>Hvorfor dette finnes</h3><p>Uke-tekst, Helsenorge-kosthold, mikronæring, sjekkliste, fornuftige innkjøp, logg og partner-spor. Alt lokalt.</p></div>
  <p class="warn">Appen erstatter ikke jordmor, fastlege, fødeavdeling eller Helsenorge. Ved mindre liv, blødning, vannavgang, sterk hodepine, synsforstyrrelse eller plutselig hevelse: jordmor, føde eller 113 — ikke appen.</p>`
 }
-function nextAppt(){const list=(state.appts||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));const today=new Date().toISOString().slice(0,10);const n=list.find(a=>a.date>=today);if(!n)return `<p class="sub">Ingen avtaler. Legg inn under Mer.</p>`;return `<p><b>${n.date}</b> — ${esc(n.title||"Kontroll")}</p><p class="tiny">${esc(n.note||"")}</p>`}
+function nextAppt(){const list=(state.appts||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));const today=new Date().toISOString().slice(0,10);const n=list.find(a=>a.date>=today);if(!n)return `<p class="sub">Ingen kommende avtaler. Trykk her for å legge til — også hverdagslige ting som gjentas hver dag.</p>`;return `<p><b>${n.date}</b> — ${esc(n.title||"Kontroll")}</p><p class="tiny">${esc(n.note||"")}</p>`}
 
 
 let baby3dRaf=0, baby3dRenderer=null;
@@ -1152,7 +1156,9 @@ function expandPlanInstances(daysAhead){
     let cur=new Date(start.getTime());
     let guard=0;
     while(cur<today && guard<400){
-      if(recur==="weekly") cur=addDays(cur,7);
+      if(recur==="daily") cur=addDays(cur,1);
+      else if(recur==="daily") cur=addDays(cur,1);
+      else if(recur==="weekly") cur=addDays(cur,7);
       else if(recur==="biweekly") cur=addDays(cur,14);
       else if(recur==="monthly"){const n=new Date(cur);n.setMonth(n.getMonth()+1);cur=n}
       else break;
@@ -1163,7 +1169,9 @@ function expandPlanInstances(daysAhead){
       if(cur>=today){
         out.push({kind:"event",id:e.id,title:e.title,date:ymd(cur),time:e.time||"",note:e.note||"",recur,active:e.active!==false,src:e,instance:true});
       }
-      if(recur==="weekly") cur=addDays(cur,7);
+      if(recur==="daily") cur=addDays(cur,1);
+      else if(recur==="daily") cur=addDays(cur,1);
+      else if(recur==="weekly") cur=addDays(cur,7);
       else if(recur==="biweekly") cur=addDays(cur,14);
       else if(recur==="monthly"){const n=new Date(cur);n.setMonth(n.getMonth()+1);cur=n}
       else break;
@@ -1177,7 +1185,7 @@ function expandPlanInstances(daysAhead){
   out.sort((a,b)=>(a.date+(a.time||"")).localeCompare(b.date+(b.time||""))||String(a.title).localeCompare(String(b.title)));
   return out;
 }
-function recurLabel(r){return ({none:"Ingen",weekly:"Hver uke",biweekly:"Annenhver uke",monthly:"Hver måned"})[r]||"Ingen"}
+function recurLabel(r){return ({none:"Ingen",daily:"Hver dag",weekly:"Hver uke",biweekly:"Annenhver uke",monthly:"Hver måned"})[r]||"Ingen"}
 function lifeStatusLabel(s){return ({todo:"Ikke startet",doing:"Pågår",done:"Ferdig"})[s]||s}
 
 function viewPlanKalender(){
@@ -1200,6 +1208,7 @@ function viewPlanKalender(){
   <label>Note</label><input id="evnote" value="${esc(editing?editing.note||"":"")}" placeholder="Kort note"/>
   <label>Gjentakelse</label><select id="evrecur">
     <option value="none" ${!editing||editing.recur==="none"||!editing.recur?"selected":""}>Ingen</option>
+    <option value="daily" ${editing&&editing.recur==="daily"?"selected":""}>Hver dag</option>
     <option value="weekly" ${editing&&editing.recur==="weekly"?"selected":""}>Hver uke</option>
     <option value="biweekly" ${editing&&editing.recur==="biweekly"?"selected":""}>Annenhver uke</option>
     <option value="monthly" ${editing&&editing.recur==="monthly"?"selected":""}>Hver måned</option>
@@ -1403,7 +1412,7 @@ function viewMore(){
  <label>Termin</label><input id="due" type="date" value="${state.due||""}"/>
  <label>Visning</label><select id="role"><option value="gravid" ${state.role==="gravid"?"selected":""}>Jeg er gravid</option><option value="partner" ${state.role==="partner"?"selected":""}>Jeg er partner</option></select>
  <div class="row" style="margin-top:12px"><button class="btn" id="saveprof">Lagre</button></div></div>
- <div class="card"><h3>Avtaler</h3><label>Dato</label><input id="adate" type="date"/><label>Hva</label><input id="atitle" placeholder="Svangerskapskontroll"/>
+ <div class="card"><h3>Avtaler</h3><p class="tiny">Engangsavtaler (kontroll o.l.). For ting som gjentas <b>hver dag</b>, bruk Plan → Kalender.</p><label>Dato</label><input id="adate" type="date"/><label>Hva</label><input id="atitle" placeholder="Svangerskapskontroll"/>
  <label>Note</label><input id="anote" placeholder="Jordmor / sted"/>
  <div class="row" style="margin-top:10px"><button class="btn2" id="addappt">Legg til</button></div>
  <ul class="clean">${(state.appts||[]).slice().sort((a,b)=>a.date.localeCompare(b.date)).map((a,i)=>`<li><div><b>${a.date}</b> ${esc(a.title)}<div class="tiny">${esc(a.note||"")}</div></div><button class="btn2" data-delappt="${i}">Slett</button></li>`).join("")}</ul></div>
@@ -1466,6 +1475,14 @@ function bind(){
 
  const sw=document.getElementById("storageWarn");
  if(sw){sw.style.display=(!storageAvailable()||isEmbeddedBrowser())?"block":"none"}
+ 
+ const goAp=document.getElementById("goAppts");
+ if(goAp){
+  const openAppts=()=>{state.tab="plan";state.planSub="kalender";state._editEventId=null;save();render(); setTimeout(()=>{const el=document.getElementById("evtitle"); if(el) el.focus()},50)};
+  goAp.onclick=openAppts;
+  goAp.onkeydown=(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openAppts()}};
+ }
+
  document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>setTab(b.dataset.go));
  document.querySelectorAll("[data-kun]").forEach(b=>b.onclick=()=>{state.kunnskap=b.dataset.kun;save();render()});
  document.querySelectorAll("[data-chk]").forEach(cb=>cb.onchange=()=>{state.checks[cb.dataset.chk]=cb.checked;save()});
@@ -1520,7 +1537,32 @@ function bind(){
  if(aa) aa.onclick=()=>{const date=document.getElementById("adate").value;if(!date)return;state.appts.push({date,title:document.getElementById("atitle").value,note:document.getElementById("anote").value});save();render()};
  document.querySelectorAll("[data-delappt]").forEach(b=>b.onclick=()=>{state.appts.splice(Number(b.dataset.delappt),1);save();render()});
  const sn=document.getElementById("savenotes");
- if(sn) sn.onclick=()=>{state.notes=document.getElementById("notes").value;save()};
+ if(sn) sn.onclick=()=>{
+  const el=document.getElementById("notes");
+  if(!el){alert("Fant ikke notatfeltet.");return}
+  state.notes=el.value;
+  save();
+  // confirm round-trip
+  try{
+    const again=JSON.parse(localStorage.getItem(KEY)||"{}");
+    if((again.notes||"")!==state.notes){
+      alert("Notatet ble ikke lagret. Åpne i Safari (ikke Privat/chat), og prøv igjen.");
+      return;
+    }
+  }catch(e){}
+  render();
+  alert("Felles notat er lagret på denne telefonen.");
+};
+ const notesEl=document.getElementById("notes");
+ if(notesEl && !notesEl._autosaveBound){
+  notesEl._autosaveBound=true;
+  let tmr=null;
+  notesEl.addEventListener("input",()=>{
+    clearTimeout(tmr);
+    tmr=setTimeout(()=>{state.notes=notesEl.value;save()},400);
+  });
+ }
+
  const exp=document.getElementById("exp");
  if(exp) exp.onclick=()=>{const out=Object.assign({},state);const strip=arr=>(arr||[]).map(x=>{const o=Object.assign({},x);delete o.photoData;return o});out.memories=strip(state.memories);out.lifePlan=strip(state.lifePlan);const nPhoto=(out.memories||[]).filter(m=>m.photoKey).length+(out.lifePlan||[]).filter(m=>m.photoKey).length;out._exportNote="Bilder ligger lokalt (IndexedDB) og er ikke med i denne filen. Antall fotonøkler: "+nPhoto+".";delete out._editMemId;delete out._editLifeId;delete out._editEventId;delete out._memFilter;delete out._idbLimited;delete out._pendingMemFile;const blob=new Blob([JSON.stringify(out,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="ossto-backup.json";a.click()};
  const pdf=document.getElementById("pdf");
