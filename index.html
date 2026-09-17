@@ -2,7 +2,7 @@
 <html lang="no">
 <head>
 <meta charset="UTF-8"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline' https://unpkg.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://unpkg.com; worker-src blob: 'self'; frame-src 'none'; object-src 'none'; base-uri 'self';"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline' https://unpkg.com https://www.gstatic.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://unpkg.com https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://firebase.googleapis.com https://firebaseinstallations.googleapis.com; worker-src blob: 'self'; frame-src 'none'; object-src 'none'; base-uri 'self';"/>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <meta name="theme-color" content="#5c3a36"/>
@@ -11,6 +11,8 @@
 <title>familien vår</title>
 <link rel="manifest" href="manifest.json"/>
 <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet"/>
@@ -742,7 +744,7 @@ const HILSEN={
 };
 const KEY="ossto.v1";
 const state=load();
-function defaults(){return{nameA:"",nameB:"",due:"",role:"gravid",setup:false,logs:[],kicks:[],weights:[],appts:[],notes:"",shop:{},bag:{},names:[],contractions:[],checks:{},tab:"hjem",browseWeek:null,kunnskap:"oversikt",phoneFode:"",phoneLege:"",bt:[],sf:[],water:[],meds:[],questions:"",birthplan:"",vax:{},contacts:"",planSub:"kalender",events:[],staples:[],shopList:[],budget:{income:[],expense:[],month:new Date().toISOString().slice(0,7)},lifePlan:[],memories:[],supplements:[]}}
+function defaults(){return{nameA:"",nameB:"",due:"",role:"gravid",setup:false,logs:[],kicks:[],weights:[],appts:[],notes:"",shop:{},bag:{},names:[],contractions:[],checks:{},tab:"hjem",browseWeek:null,kunnskap:"oversikt",phoneFode:"",phoneLege:"",bt:[],sf:[],water:[],meds:[],questions:"",birthplan:"",vax:{},contacts:"",planSub:"kalender",events:[],staples:[],shopList:[],budget:{income:[],expense:[],month:new Date().toISOString().slice(0,7)},lifePlan:[],memories:[],supplements:[],firebaseConfig:null,syncCode:"",syncEnabled:false,syncUpdatedAt:0,syncRev:0}}
 function load(){
   try{
     const raw=JSON.parse(localStorage.getItem(KEY)||"{}");
@@ -758,6 +760,12 @@ function load(){
     if(!Array.isArray(s.lifePlan))s.lifePlan=[];
     if(!Array.isArray(s.memories))s.memories=[];if(!Array.isArray(s.supplements))s.supplements=[];
     if(!s.planSub||!["kalender","handle","budsjett","livsplan","tilbakeblikk"].includes(s.planSub))s.planSub="kalender";
+    if(window.__FIREBASE__ && typeof window.__FIREBASE__==="object" && !s.firebaseConfig) s.firebaseConfig=window.__FIREBASE__;
+    if(s.firebaseConfig && typeof s.firebaseConfig!=="object") s.firebaseConfig=null;
+    if(typeof s.syncCode!=="string") s.syncCode="";
+    if(typeof s.syncEnabled!=="boolean") s.syncEnabled=!!s.syncCode;
+    if(typeof s.syncUpdatedAt!=="number") s.syncUpdatedAt=0;
+    if(typeof s.syncRev!=="number") s.syncRev=0;
     if(s.tab==="sjekk"){s.tab="kunnskap";s.kunnskap="sjekk"}
     // Recover from profile backup if main blob lost setup
     try{
@@ -896,11 +904,330 @@ function save(){
       }));
     }catch(e){}
     saveProfileIdb(slim).catch(function(){});
+    scheduleSyncPush();
   }catch(e){
     console.error(e);
     alert("Kunne ikke lagre på denne telefonen. Åpne siden i Safari (ikke Privat, ikke chat-vindu). Del → Åpne i Safari.");
   }
 }
+
+/* ===== Felles synk (Firebase Realtime Database) =====
+   Dev rules (paste in Firebase console → Realtime Database → Rules):
+   {
+     "rules": {
+       "families": {
+         "$code": {
+           ".read": true,
+           ".write": true
+         }
+       }
+     }
+   }
+   Security = unguessable family code. Prefer 8+ chars. Tighten later if needed.
+   Photos: photoKey refs stay device-local (IndexedDB). Base64 photoData is stripped from sync to keep payloads small.
+*/
+let _fbApp=null,_fbDb=null,_fbUnsub=null,_syncPushTimer=null,_syncApplying=false,_syncOwnWriteUntil=0,_syncLastApplied=0,_syncStatusMsg="";
+const SYNC_LOCAL_KEYS=["tab","browseWeek","kunnskap","planSub","_editEventId","_editLifeId","_editMemId","_memFilter","_idbLimited","_pendingMemFile","_pendingLifeFile"];
+function formatSyncCode(code){
+  const c=String(code||"").replace(/[^A-Z0-9]/g,"").toUpperCase();
+  if(c.length<=4) return c;
+  return c.slice(0,4)+"-"+(c.length>8?c.slice(4):c.slice(4,8));
+}
+function genFamilyCode(){
+  const alphabet="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I
+  let out="";
+  for(let i=0;i<8;i++) out+=alphabet[Math.floor(Math.random()*alphabet.length)];
+  return out;
+}
+function getFirebaseConfig(){
+  if(state.firebaseConfig && typeof state.firebaseConfig==="object" && state.firebaseConfig.apiKey) return state.firebaseConfig;
+  if(window.__FIREBASE__ && typeof window.__FIREBASE__==="object" && window.__FIREBASE__.apiKey) return window.__FIREBASE__;
+  return null;
+}
+function stripEphemeral(src){
+  const localKeep={};
+  SYNC_LOCAL_KEYS.forEach(function(k){ if(k in src) localKeep[k]=src[k]; });
+  const cloned=JSON.parse(JSON.stringify(src, function(k,v){
+    if(v && typeof v==="object" && (v instanceof File || v instanceof Blob)) return undefined;
+    if(k==="photoData") return undefined; // IDB / device-local blobs
+    if(typeof k==="string" && (k.indexOf("_edit")===0 || k.indexOf("_pending")===0)) return undefined;
+    if(k==="_memFilter" || k==="_idbLimited") return undefined;
+    return v;
+  }));
+  SYNC_LOCAL_KEYS.forEach(function(k){ delete cloned[k]; });
+  // keep sync meta out of nested data blob (stored at RTDB root)
+  delete cloned.firebaseConfig; // config stays local per device (same paste on both)
+  delete cloned.syncEnabled;
+  delete cloned.syncCode;
+  delete cloned.syncUpdatedAt;
+  delete cloned.syncRev;
+  return {data:cloned, localKeep};
+}
+function ensureFirebase(){
+  const cfg=getFirebaseConfig();
+  if(!cfg) return null;
+  if(typeof firebase==="undefined"){
+    _syncStatusMsg="Firebase SDK mangler (nett/CSP).";
+    return null;
+  }
+  try{
+    if(!_fbApp){
+      if(firebase.apps && firebase.apps.length) _fbApp=firebase.apps[0];
+      else _fbApp=firebase.initializeApp(cfg);
+    }
+    if(!_fbDb) _fbDb=firebase.database();
+    return _fbDb;
+  }catch(e){
+    console.error(e);
+    _syncStatusMsg="Firebase-feil: "+(e&&e.message?e.message:"ukjent");
+    return null;
+  }
+}
+function familyRef(code){
+  const db=ensureFirebase();
+  if(!db||!code) return null;
+  return db.ref("families/"+String(code).toUpperCase());
+}
+function scheduleSyncPush(){
+  if(_syncApplying) return;
+  if(!state.syncEnabled || !state.syncCode || !getFirebaseConfig()) return;
+  if(_syncPushTimer) clearTimeout(_syncPushTimer);
+  _syncPushTimer=setTimeout(function(){ pushSyncNow(); },400);
+}
+function pushSyncNow(){
+  _syncPushTimer=null;
+  if(_syncApplying) return;
+  if(!state.syncEnabled || !state.syncCode || !getFirebaseConfig()) return;
+  const ref=familyRef(state.syncCode);
+  if(!ref) return;
+  const stripped=stripEphemeral(state);
+  const rev=(Number(state.syncRev)||0)+1;
+  const updatedAt=Date.now();
+  const payload={data:stripped.data, updatedAt:updatedAt, rev:rev};
+  _syncOwnWriteUntil=Date.now()+1000;
+  ref.set(payload).then(function(){
+    state.syncRev=rev;
+    state.syncUpdatedAt=updatedAt;
+    _syncLastApplied=updatedAt;
+    _syncStatusMsg="Synket "+new Date(updatedAt).toLocaleTimeString("nb-NO");
+  }).catch(function(e){
+    console.error(e);
+    _syncStatusMsg="Kunne ikke synke: "+(e&&e.message?e.message:"feil");
+  });
+}
+function applyRemotePayload(remote, opts){
+  opts=opts||{};
+  if(!remote || !remote.data || typeof remote.data!=="object") return false;
+  const updatedAt=Number(remote.updatedAt)||0;
+  if(!opts.force && updatedAt && updatedAt<=(_syncLastApplied||state.syncUpdatedAt||0)) return false;
+  const localUi={};
+  SYNC_LOCAL_KEYS.forEach(function(k){ if(k in state) localUi[k]=state[k]; });
+  const keepCfg=state.firebaseConfig;
+  const keepCode=state.syncCode;
+  const keepEn=state.syncEnabled;
+  _syncApplying=true;
+  try{
+    const d=defaults();
+    const incoming=remote.data;
+    Object.keys(state).forEach(function(k){
+      if(SYNC_LOCAL_KEYS.indexOf(k)>=0) return;
+      if(k==="firebaseConfig"||k==="syncCode"||k==="syncEnabled"||k==="syncUpdatedAt"||k==="syncRev") return;
+      // leave as-is unless remote has key — full replace of shared fields from remote
+    });
+    // Replace shared state from remote, keep device UI + sync settings
+    const merged=Object.assign({}, d, incoming);
+    Object.keys(localUi).forEach(function(k){ merged[k]=localUi[k]; });
+    merged.firebaseConfig=keepCfg;
+    merged.syncCode=keepCode;
+    merged.syncEnabled=keepEn;
+    merged.syncUpdatedAt=updatedAt;
+    merged.syncRev=Number(remote.rev)||0;
+    merged.budget=Object.assign({}, d.budget, incoming.budget||{});
+    if(!Array.isArray(merged.budget.income)) merged.budget.income=[];
+    if(!Array.isArray(merged.budget.expense)) merged.budget.expense=[];
+    ["events","staples","shopList","lifePlan","memories","supplements","logs","kicks","weights","appts","names","contractions","bt","sf","water","meds"].forEach(function(k){
+      if(!Array.isArray(merged[k])) merged[k]=Array.isArray(d[k])?d[k]:[];
+    });
+    if(!merged.shop||typeof merged.shop!=="object") merged.shop={};
+    if(!merged.bag||typeof merged.bag!=="object") merged.bag={};
+    if(!merged.checks||typeof merged.checks!=="object") merged.checks={};
+    if(!merged.vax||typeof merged.vax!=="object") merged.vax={};
+    Object.keys(state).forEach(function(k){ delete state[k]; });
+    Object.assign(state, merged);
+    _syncLastApplied=updatedAt;
+    // persist without echoing immediately as "newer" than remote
+    const prevIgnore=_syncOwnWriteUntil;
+    _syncOwnWriteUntil=Date.now()+1000;
+    try{
+      const slim=JSON.parse(JSON.stringify(state, function(k,v){
+        if(v && typeof v==="object" && (v instanceof File || v instanceof Blob)) return undefined;
+        if(k==="photoData" || k==="_pendingMemFile" || k==="_pendingLifeFile") return undefined;
+        return v;
+      }));
+      localStorage.setItem(KEY, JSON.stringify(slim));
+      saveProfileIdb(slim).catch(function(){});
+    }catch(e){ console.error(e); }
+    _syncOwnWriteUntil=Math.max(prevIgnore, Date.now()+800);
+    _syncStatusMsg="Hentet fra sky "+new Date(updatedAt).toLocaleTimeString("nb-NO");
+    render();
+    return true;
+  }finally{
+    _syncApplying=false;
+  }
+}
+function stopSyncListener(){
+  if(_fbUnsub){ try{_fbUnsub()}catch(e){} _fbUnsub=null; }
+}
+function startSyncListener(){
+  stopSyncListener();
+  if(!state.syncEnabled || !state.syncCode || !getFirebaseConfig()) return;
+  const ref=familyRef(state.syncCode);
+  if(!ref) return;
+  const handler=function(snap){
+    const remote=snap.val();
+    if(!remote) return;
+    if(Date.now() < _syncOwnWriteUntil) return;
+    const updatedAt=Number(remote.updatedAt)||0;
+    if(updatedAt && updatedAt<=(_syncLastApplied||state.syncUpdatedAt||0)) return;
+    applyRemotePayload(remote, {force:false});
+  };
+  ref.on("value", handler);
+  _fbUnsub=function(){ ref.off("value", handler); };
+}
+function createFamilySync(){
+  if(!getFirebaseConfig()){ alert("Lim inn Firebase-config først (Mer → Felles synk)."); return; }
+  if(!ensureFirebase()){ alert(_syncStatusMsg||"Firebase er ikke klar."); return; }
+  const code=genFamilyCode();
+  state.syncCode=code;
+  state.syncEnabled=true;
+  state.syncRev=0;
+  const stripped=stripEphemeral(state);
+  const updatedAt=Date.now();
+  const payload={data:stripped.data, updatedAt:updatedAt, rev:1};
+  const ref=familyRef(code);
+  _syncOwnWriteUntil=Date.now()+1500;
+  ref.set(payload).then(function(){
+    state.syncRev=1;
+    state.syncUpdatedAt=updatedAt;
+    _syncLastApplied=updatedAt;
+    save(); // local persist + schedule (echo ignored)
+    startSyncListener();
+    _syncStatusMsg="Familiekode opprettet";
+    render();
+    alert("Familiekode: "+formatSyncCode(code)+"\\n\\nGi koden til Silje. Begge må ha samme Firebase-config.");
+  }).catch(function(e){
+    state.syncEnabled=false;
+    state.syncCode="";
+    alert("Kunne ikke opprette: "+(e&&e.message?e.message:e));
+    render();
+  });
+}
+function joinFamilySync(rawCode){
+  const code=String(rawCode||"").replace(/[^A-Za-z0-9]/g,"").toUpperCase();
+  if(code.length<6){ alert("Koden skal være minst 6 tegn (anbefalt 8)."); return; }
+  if(!getFirebaseConfig()){ alert("Lim inn Firebase-config først."); return; }
+  if(!ensureFirebase()){ alert(_syncStatusMsg||"Firebase er ikke klar."); return; }
+  const ref=familyRef(code);
+  ref.once("value").then(function(snap){
+    const remote=snap.val();
+    if(!remote || !remote.data){
+      alert("Fant ingen familie med den koden. Sjekk at den andre har opprettet koden først.");
+      return;
+    }
+    const remoteAt=Number(remote.updatedAt)||0;
+    const localAt=Number(state.syncUpdatedAt)||0;
+    const firstJoin=!state.syncCode;
+    if(firstJoin){
+      if(!confirm("Erstatt lokal data med familiens sky-data? (Anbefalt første gang du kobler til.)")) return;
+      state.syncCode=code;
+      state.syncEnabled=true;
+      applyRemotePayload(remote, {force:true});
+      startSyncListener();
+      save();
+      return;
+    }
+    state.syncCode=code;
+    state.syncEnabled=true;
+    if(remoteAt>=localAt){
+      applyRemotePayload(remote, {force:true});
+    }else{
+      // local newer — push after join
+      _syncLastApplied=localAt;
+      pushSyncNow();
+    }
+    startSyncListener();
+    save();
+    render();
+  }).catch(function(e){
+    alert("Kunne ikke koble til: "+(e&&e.message?e.message:e));
+  });
+}
+function stopFamilySync(){
+  stopSyncListener();
+  state.syncEnabled=false;
+  // keep code so they can re-enable easily
+  save();
+  _syncStatusMsg="Synk av";
+  render();
+}
+function saveFirebaseConfigFromUi(){
+  const el=document.getElementById("fbconfig");
+  if(!el) return;
+  const raw=(el.value||"").trim();
+  if(!raw){ alert("Lim inn JSON-config fra Firebase-konsollen."); return; }
+  try{
+    const obj=JSON.parse(raw);
+    if(!obj.apiKey || !obj.databaseURL){
+      alert("Config må ha minst apiKey og databaseURL.");
+      return;
+    }
+    state.firebaseConfig=obj;
+    _fbApp=null; _fbDb=null;
+    save();
+    if(state.syncEnabled && state.syncCode) startSyncListener();
+    alert("Firebase-config lagret på denne telefonen.");
+    render();
+  }catch(e){
+    alert("Ugyldig JSON. Lim inn hele firebaseConfig-objektet.");
+  }
+}
+function syncStatusHtml(){
+  const on=!!(state.syncEnabled && state.syncCode);
+  const code=state.syncCode?formatSyncCode(state.syncCode):"—";
+  const cfg=getFirebaseConfig();
+  const cfgOk=!!cfg;
+  return `<div class="card" id="syncCard"><h3>Felles synk</h3>
+ <p><b>Status:</b> ${on?"På":"Av"}${on?" · "+esc(code):""}${cfgOk?"":" · mangler Firebase-config"}</p>
+ ${_syncStatusMsg?`<p class="tiny">${esc(_syncStatusMsg)}</p>`:""}
+ <p class="tiny"><b>Slik gjør dere det:</b> 1) Terje lager Firebase-prosjekt med Realtime Database. 2) Begge limer inn samme config under. 3) Én trykker «Opprett familiekode». 4) Den andre limer inn koden og trykker «Koble til». Da deler dere live state.</p>
+ <p class="tiny">Bilder lagret i IndexedDB (photoKey) blir <b>på telefonen</b>. Metadata synkes. Unngå store base64-bilder i synk.</p>
+ <label>Firebase config (JSON)</label>
+ <textarea id="fbconfig" rows="6" placeholder='{"apiKey":"...","authDomain":"...","databaseURL":"https://....firebaseio.com","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}'>${esc(cfg?JSON.stringify(cfg,null,2):"")}</textarea>
+ <div class="row" style="margin-top:8px"><button class="btn2" type="button" id="savefbconfig">Lagre config</button></div>
+ <label style="margin-top:12px">Familiekode</label>
+ <input id="joincode" placeholder="ABCD-EFGH eller 8 tegn" value="${esc(state.syncCode?formatSyncCode(state.syncCode):"")}"/>
+ <div class="row" style="margin-top:10px;flex-wrap:wrap;gap:8px">
+  <button class="btn" type="button" id="mkfamily">Opprett familiekode</button>
+  <button class="btn2" type="button" id="joinfamily">Koble til kode</button>
+  <button class="btn2" type="button" id="copyfamily">Kopier kode</button>
+  <button class="btn2" type="button" id="stopfamily">Stopp synk</button>
+ </div>
+ <details style="margin-top:12px"><summary class="tiny">database.rules.json (utvikling)</summary>
+ <pre class="tiny" style="white-space:pre-wrap;background:var(--rose-soft);padding:10px;border-radius:12px">{
+  "rules": {
+    "families": {
+      "$code": {
+        ".read": true,
+        ".write": true
+      }
+    }
+  }
+}</pre>
+ <p class="tiny">Med åpen read/write er sikkerheten = umulig å gjette lang kode (8+ tegn). Stram inn senere om dere vil.</p>
+ </details>
+ </div>`;
+}
+
 let _idb=null,_idbOk=null,_photoCache={},_pendingMemFile=null,_pendingLifeFile=null;
 function openPhotoDb(){
   return new Promise(function(resolve,reject){
@@ -1807,9 +2134,10 @@ function viewMore(){
 <button class="btn" id="mkTransfer" type="button">Lag overføringslenke</button>
 <p class="tiny" id="transferOut" style="margin-top:8px;word-break:break-all"></p>
 </div>
-<div class="card"><h3>Data</h3><div class="row"><button class="btn2" id="exp">Eksporter JSON</button><button class="btn" id="pdf">Lagre PDF</button><button class="btn2" id="imp">Importer</button>
+${syncStatusHtml()}
+ <div class="card"><h3>Data</h3><div class="row"><button class="btn2" id="exp">Eksporter JSON</button><button class="btn" id="pdf">Lagre PDF</button><button class="btn2" id="imp">Importer</button>
  <input id="file" type="file" accept="application/json" class="hidden"/></div>
- <p class="tiny">Send JSON til den andre telefonen for manuell synk.</p></div>
+ <p class="tiny">Send JSON til den andre telefonen for manuell synk (eller bruk Felles synk over).</p></div>
  <p class="warn">Appen erstatter ikke jordmor, fastlege, fødeavdeling eller Helsenorge. Helsenorge og Gravidhjelpen er kildene — appen er et kart, ikke behandleren.</p>`
 }
 
@@ -1818,6 +2146,25 @@ function bind(){
 
  const sh=document.getElementById("standaloneHint"); if(sh){sh.style.display=isStandaloneApp()?"block":"none"}
  
+ const savefb=document.getElementById("savefbconfig");
+ if(savefb) savefb.onclick=()=>saveFirebaseConfigFromUi();
+ const mkf=document.getElementById("mkfamily");
+ if(mkf) mkf.onclick=()=>createFamilySync();
+ const jnf=document.getElementById("joinfamily");
+ if(jnf) jnf.onclick=()=>{
+  const v=(document.getElementById("joincode")&&document.getElementById("joincode").value)||"";
+  joinFamilySync(v);
+ };
+ const cpf=document.getElementById("copyfamily");
+ if(cpf) cpf.onclick=async()=>{
+  if(!state.syncCode){alert("Ingen kode ennå. Opprett eller koble til først.");return}
+  const t=formatSyncCode(state.syncCode);
+  try{ if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(t); alert("Kode kopiert: "+t); return;} }catch(e){}
+  prompt("Kopier koden:", t);
+ };
+ const stf=document.getElementById("stopfamily");
+ if(stf) stf.onclick=()=>{ if(confirm("Stoppe synk på denne telefonen? Koden huskes.")) stopFamilySync(); };
+
  const mt=document.getElementById("mkTransfer");
  if(mt) mt.onclick=async()=>{
   if(!state.setup||!state.due||!state.nameA){alert("Fullfør oppsett med navn og termin først.");return}
@@ -1954,7 +2301,7 @@ function bind(){
  }
 
  const exp=document.getElementById("exp");
- if(exp) exp.onclick=()=>{const out=Object.assign({},state);const strip=arr=>(arr||[]).map(x=>{const o=Object.assign({},x);delete o.photoData;return o});out.memories=strip(state.memories);out.lifePlan=strip(state.lifePlan);const nPhoto=(out.memories||[]).filter(m=>m.photoKey).length+(out.lifePlan||[]).filter(m=>m.photoKey).length;out._exportNote="Bilder ligger lokalt (IndexedDB) og er ikke med i denne filen. Antall fotonøkler: "+nPhoto+".";delete out._editMemId;delete out._editLifeId;delete out._editEventId;delete out._memFilter;delete out._idbLimited;delete out._pendingMemFile;const blob=new Blob([JSON.stringify(out,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="ossto-backup.json";a.click()};
+ if(exp) exp.onclick=()=>{const out=Object.assign({},state);const strip=arr=>(arr||[]).map(x=>{const o=Object.assign({},x);delete o.photoData;return o});out.memories=strip(state.memories);out.lifePlan=strip(state.lifePlan);const nPhoto=(out.memories||[]).filter(m=>m.photoKey).length+(out.lifePlan||[]).filter(m=>m.photoKey).length;out._exportNote="Bilder ligger lokalt (IndexedDB) og er ikke med i denne filen. Antall fotonøkler: "+nPhoto+".";delete out._editMemId;delete out._editLifeId;delete out._editEventId;delete out._memFilter;delete out._idbLimited;delete out._pendingMemFile;delete out.firebaseConfig;const blob=new Blob([JSON.stringify(out,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="ossto-backup.json";a.click()};
  const pdf=document.getElementById("pdf");
  if(pdf) pdf.onclick=()=>exportPdf();
  const file=document.getElementById("file"); const imp=document.getElementById("imp");
@@ -2092,6 +2439,12 @@ function bind(){
  });
 }
 render();
+try{
+  if(state.syncEnabled && state.syncCode && getFirebaseConfig()){
+    _syncLastApplied=Number(state.syncUpdatedAt)||0;
+    startSyncListener();
+  }
+}catch(e){ console.error(e); }
 </script>
 </body>
 </html>
