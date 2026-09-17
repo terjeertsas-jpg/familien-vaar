@@ -1097,6 +1097,30 @@ function viewPlanBudsjett(){
   <ul class="clean">${(b.expense||[]).map(it=>row("expense",it)).join("")||"<p class='sub'>Ingen utgifter.</p>"}</ul></div>`;
 }
 
+
+const LIFE_SUGGESTIONS=[
+  {title:"Bestille første svangerskapskontroll",when:"1. trimester",note:"Fastlege eller jordmor. Ta med spørsmål.",kind:"gravid"},
+  {title:"Rutineultralyd",when:"Uke 17–19",note:"Book i god tid via jordmor/helsestasjon.",kind:"gravid"},
+  {title:"Informere arbeidsgiver",when:"Når dere er klare",note:"Rett til fri med lønn til kontroll. Tilrettelegging ved behov.",kind:"gravid"},
+  {title:"Søke foreldrepenger",when:"Senest 4 uker før uttak",note:"Begge søker sin del. Sjekk 49/59 uker-valget før første uttak.",kind:"gravid"},
+  {title:"Velge fødested / omvisning",when:"Uke 26–36",note:"Følg lokale tilbud.",kind:"gravid"},
+  {title:"Pakke sykehussekk",when:"Uke 34–36",note:"Ferdig nok til at dere kan dra på 20 minutter.",kind:"gravid"},
+  {title:"Spedbarns førstehjelp",when:"Uke 24–32",note:"Meld på i god tid.",kind:"gravid"},
+  {title:"Fødselsforberedende kurs",when:"Uke 28–34",note:"Sjekk kommunens eller sykehusets tilbud.",kind:"gravid"},
+  {title:"Bilsete i bilen",when:"Før hjemreise",note:"Installer og test i egen bil.",kind:"gravid"},
+  {title:"Finne helsestasjon",when:"Før termin",note:"Vet adresse og hvordan dere bestiller.",kind:"gravid"},
+  {title:"Søke barnehageplass",when:"Etter lokale frister",note:"Frister varierer. Sjekk kommunen tidlig.",kind:"liv"},
+  {title:"Planlegge permisjonsfordeling",when:"2.–3. trimester",note:"Fedrekvote faller bort om den ikke tas ut.",kind:"liv"},
+  {title:"Budsjett for barseltid",when:"Før permisjon",note:"Se Plan → Budsjett. Legg inn faste utgifter.",kind:"liv"},
+  {title:"Ordne bolig/barnerom-minimum",when:"Når det trengs",note:"Trygt sted å sove er nok første uken.",kind:"liv"},
+  {title:"Oppdatere testament / forsikring",when:"Når dere er klare",note:"Valgfritt, men verdt en samtale.",kind:"liv"},
+  {title:"Navn — kortliste",when:"Når dere vil",note:"Bruk Lister → Navn.",kind:"liv"},
+  {title:"Besøksregler etter fødsel",when:"Uke 28–34",note:"Kort liste. Partner er dørvakt.",kind:"liv"},
+  {title:"Ammeveiledning / flaskeplan",when:"Uke 32+",note:"Ingen fasit. Ha et nummer å ringe.",kind:"liv"},
+  {title:"Barsel + egenomsorg for begge",when:"Etter fødsel",note:"Mat i frys, hvem som tar nettene, hvem som ber om hjelp.",kind:"liv"},
+  {title:"Første tur uten baby (hver for dere)",when:"Når det føles mulig",note:"Kort tur. Avtal hvem som er hjemme.",kind:"liv"}
+];
+
 function viewPlanLivsplan(){
   const items=state.lifePlan||[];
   const list=items.length?items.map(it=>`<li class="mem-row">${memThumbHtml(it.photoKey,it.photoData)}<div class="mem-body"><b>${esc(it.title)}</b> <span class="pill" style="padding:4px 10px;font-size:11px">${lifeStatusLabel(it.status||"todo")}</span><div class="tiny">${esc(it.when||"")}${it.note?" · "+esc(it.note):""}</div>
@@ -1107,9 +1131,20 @@ function viewPlanLivsplan(){
     <button class="btn2" data-editlife="${esc(it.id)}">Rediger</button>
     <label class="btn2" style="display:inline-flex;align-items:center;cursor:pointer;margin:0">Legg til bilde<input type="file" accept="image/*" capture="environment" data-lifephoto="${esc(it.id)}" class="hidden"/></label>
     <button class="btn2" data-dellife="${esc(it.id)}">Slett</button>
-  </div></div></li>`).join(""):"<p class='sub'>Ingen mål ennå. Dere kan legge inn det som betyr noe for dere — i deres tempo.</p>";
+  </div></div></li>`).join(""):"<p class='sub'>Ingen mål ennå. Trykk et forslag under, eller skriv deres eget.</p>";
   const editing=state._editLifeId?(state.lifePlan||[]).find(x=>x.id===state._editLifeId):null;
-  return `<div class="card"><h3>${editing?"Rediger mål":"Nytt mål eller milepæl"}</h3>
+  const existing=new Set((state.lifePlan||[]).map(x=>(x.title||"").toLowerCase()));
+  const sugG=LIFE_SUGGESTIONS.filter(s=>s.kind==="gravid"&&!existing.has(s.title.toLowerCase()));
+  const sugL=LIFE_SUGGESTIONS.filter(s=>s.kind==="liv"&&!existing.has(s.title.toLowerCase()));
+  const chip=s=>`<button type="button" class="pill" data-lifesug="${esc(s.title)}" style="text-align:left;padding:8px 12px;margin:0 8px 8px 0">${esc(s.title)}</button>`;
+  const sugBlock=`<div class="card"><h3>Forslag</h3>
+  <p class="tiny">Trykk for å legge inn. Dere kan redigere eller slette etterpå. Dette er praktiske påminnelser — ikke fasit.</p>
+  <p class="tiny" style="margin-top:10px;font-weight:600">Graviditet og fødsel</p>
+  <div>${sugG.map(chip).join("")||"<span class='tiny'>Alle graviditetsforslag er allerede lagt inn.</span>"}</div>
+  <p class="tiny" style="margin-top:12px;font-weight:600">Liv og familie</p>
+  <div>${sugL.map(chip).join("")||"<span class='tiny'>Alle livsforslag er allerede lagt inn.</span>"}</div>
+  </div>`;
+  return `${sugBlock}<div class="card"><h3>${editing?"Rediger mål":"Nytt mål eller milepæl"}</h3>
   <label>Tittel</label><input id="lifetitle" value="${esc(editing?editing.title:"")}" placeholder="F.eks. søke barnehage"/>
   <label>Når (dato eller periode)</label><input id="lifewhen" value="${esc(editing?editing.when||"":"")}" placeholder="Høsten 2027 / 2026-03-15"/>
   <label>Status</label><select id="lifestatus">
@@ -1119,47 +1154,9 @@ function viewPlanLivsplan(){
   </select>
   <label>Note</label><textarea id="lifenote" placeholder="Valgfritt">${esc(editing?editing.note||"":"")}</textarea>
   <label>Bilde (valgfritt)</label><input id="lifephoto" type="file" accept="image/*" capture="environment"/>
-  ${editing&&(editing.photoKey||editing.photoData)?`<p class="tiny">Dette målet har allerede et bilde. Velg et nytt for å bytte.</p>`:""}
-  <div class="row" style="margin-top:12px"><button class="btn" id="savelife">${editing?"Lagre":"Legg til"}</button>${editing?`<button class="btn2" id="cancellife">Avbryt</button>`:""}</div>
-  <p class="tiny">Forslag til felt: permisjon, barnehage, flytting — bare eksempler. Dere velger selv.</p></div>
-  <div class="card"><h3>Dere to</h3><ul class="clean">${list}</ul></div>`;
-}
-
-function viewPlanTilbakeblikk(){
-  const filter=state._memFilter||"alle";
-  const editing=state._editMemId?(state.memories||[]).find(x=>x.id===state._editMemId):null;
-  let mems=(state.memories||[]).slice();
-  if(filter==="gravid") mems=mems.filter(m=>m.kind==="gravid");
-  else if(filter==="liv") mems=mems.filter(m=>m.kind==="liv");
-  mems.sort((a,b)=>(b.date||"").localeCompare(a.date||""));
-  const kindLabel=k=>k==="gravid"?"Graviditet":"Livsmål";
-  const memTitles=new Set((state.memories||[]).map(m=>(m.title||"").toLowerCase()));
-  const doneLife=(filter==="gravid"?[]:(state.lifePlan||[]).filter(it=>(it.status||"")==="done"&&!memTitles.has((it.title||"").toLowerCase())));
-  const filters=[["alle","Alle"],["gravid","Graviditet"],["liv","Livsmål"]].map(([id,l])=>`<button class="pill" data-memfilter="${id}" style="${filter===id?"background:var(--rose-soft,#f3e2dc);color:var(--ink);border-color:rgba(122,62,69,.22);font-weight:600":""}">${l}</button>`).join("");
-  const list=mems.length?mems.map(m=>`<li class="mem-row">${memThumbHtml(m.photoKey,m.photoData)}<div class="mem-body"><b>${esc(m.title)}</b> <span class="kind-badge">${kindLabel(m.kind)}</span><div class="tiny">${esc(m.date||"")}${m.note?" · "+esc(m.note):""}</div>
-  <div class="row" style="margin-top:6px">
-    <button class="btn2" data-editmem="${esc(m.id)}">Rediger</button>
-    <button class="btn2" data-delmem="${esc(m.id)}">Slett</button>
-  </div></div></li>`).join(""):`<p class="sub">Ingen milepæler ennå. Hva med den første ultralyden, den positive testen, eller dagen dere flyttet inn — bare eksempler. Legg inn det som betyr noe for dere.</p>`;
-  const secondary=doneLife.length?`<div class="card"><h3>Fullførte livsmål</h3><p class="tiny">Ferdige mål som ikke allerede er lagret som minne.</p><ul class="clean">${doneLife.map(it=>`<li><div style="flex:1;min-width:0"><b>${esc(it.title)}</b> <span class="kind-badge">Livsmål</span><div class="tiny">${esc(it.when||"")}${it.note?" · "+esc(it.note):""}</div></div></li>`).join("")}</ul></div>`:"";
-  const idbWarn=state._idbLimited?`<p class="warn">IndexedDB er ikke tilgjengelig her. Bilder lagres begrenset på telefonen — bare noen få bilder.</p>`:"";
-  return `<div class="card"><h3>Tilbakeblikk</h3>
-  <p>Dette er deres private tilbakeblikk — milepæler og bilder som blir på telefonen. Ingen sky, ingen deling.</p>
-  ${idbWarn}</div>
-  <div class="card"><h3>${editing?"Rediger minne":"Nytt minne"}</h3>
-  <label>Tittel</label><input id="memtitle" value="${esc(editing?editing.title:"")}" placeholder="F.eks. første ultralyd"/>
-  <label>Dato</label><input id="memdate" type="date" value="${esc(editing?editing.date||"":"")}"/>
-  <label>Type</label><select id="memkind">
-    <option value="gravid" ${!editing||editing.kind==="gravid"?"selected":""}>Graviditet</option>
-    <option value="liv" ${editing&&editing.kind==="liv"?"selected":""}>Livsmål</option>
-  </select>
-  <label>Note</label><textarea id="memnote" placeholder="Valgfritt">${esc(editing?editing.note||"":"")}</textarea>
-  <label>Bilde (valgfritt)</label><input id="memphoto" type="file" accept="image/*" capture="environment"/>
-  ${editing&&(editing.photoKey||editing.photoData)?`<p class="tiny">Dette minnet har allerede et bilde. Velg et nytt for å bytte.</p>`:""}
-  <div class="row" style="margin-top:12px"><button class="btn" id="savemem">${editing?"Lagre":"Legg til"}</button>${editing?`<button class="btn2" id="cancelmem">Avbryt</button>`:""}</div></div>
-  <div class="pills" style="margin-bottom:8px">${filters}</div>
-  <div class="card"><h3>Tidslinje</h3><ul class="clean">${list}</ul></div>
-  ${secondary}`;
+  ${editing?`<div class="row"><button class="btn" id="savelife">Lagre</button><button class="btn2" id="cancellife">Avbryt</button></div>`:`<button class="btn" id="savelife">Legg til</button>`}
+  </div>
+  <div class="card"><h3>Deres liste</h3><ul class="clean">${list}</ul></div>`;
 }
 
 function viewPlan(){
@@ -1404,6 +1401,17 @@ function bind(){
  const cancellife=document.getElementById("cancellife");
  if(cancellife) cancellife.onclick=()=>{state._editLifeId=null;_pendingLifeFile=null;render()};
  document.querySelectorAll("[data-editlife]").forEach(b=>b.onclick=()=>{state._editLifeId=b.dataset.editlife;render()});
+ 
+ document.querySelectorAll("[data-lifesug]").forEach(b=>b.onclick=()=>{
+  const title=b.dataset.lifesug;
+  const sug=LIFE_SUGGESTIONS.find(s=>s.title===title);
+  if(!sug)return;
+  state.lifePlan=state.lifePlan||[];
+  if(state.lifePlan.some(x=>(x.title||"").toLowerCase()===title.toLowerCase()))return;
+  state.lifePlan.push({id:uid(),title:sug.title,when:sug.when||"",status:"todo",note:sug.note||""});
+  save();render();
+ });
+ 
  document.querySelectorAll("[data-dellife]").forEach(b=>b.onclick=()=>{
   const id=b.dataset.dellife;const it=(state.lifePlan||[]).find(x=>x.id===id);
   if(it&&it.photoKey)delPhoto(it.photoKey);
