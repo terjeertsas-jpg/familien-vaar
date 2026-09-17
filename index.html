@@ -634,19 +634,112 @@ const HILSEN={
 const KEY="ossto.v1";
 const state=load();
 function defaults(){return{nameA:"",nameB:"",due:"",role:"gravid",setup:false,logs:[],kicks:[],weights:[],appts:[],notes:"",shop:{},bag:{},names:[],contractions:[],checks:{},tab:"hjem",browseWeek:null,kunnskap:"oversikt",phoneFode:"",phoneLege:"",bt:[],sf:[],water:[],meds:[],questions:"",birthplan:"",vax:{},contacts:"",planSub:"kalender",events:[],staples:[],shopList:[],budget:{income:[],expense:[],month:new Date().toISOString().slice(0,7)},lifePlan:[],memories:[]}}
-function load(){try{const raw=JSON.parse(localStorage.getItem(KEY)||"{}");const d=defaults();const s=Object.assign({},d,raw);s.budget=Object.assign({},d.budget,raw.budget||{});if(!Array.isArray(s.budget.income))s.budget.income=[];if(!Array.isArray(s.budget.expense))s.budget.expense=[];if(!s.budget.month)s.budget.month=d.budget.month;if(!Array.isArray(s.events))s.events=[];if(!Array.isArray(s.staples))s.staples=[];if(!Array.isArray(s.shopList))s.shopList=[];if(!Array.isArray(s.lifePlan))s.lifePlan=[];if(!Array.isArray(s.memories))s.memories=[];if(!s.planSub)s.planSub="kalender";if(s.tab==="sjekk"){s.tab="kunnskap";s.kunnskap="sjekk"}if(!s.setup&&s.due&&s.nameA&&s.nameB){s.setup=true}return s}catch(e){return defaults()}}
+function load(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(KEY)||"{}");
+    const d=defaults();
+    const s=Object.assign({},d,raw);
+    s.budget=Object.assign({},d.budget,raw.budget||{});
+    if(!Array.isArray(s.budget.income))s.budget.income=[];
+    if(!Array.isArray(s.budget.expense))s.budget.expense=[];
+    if(!s.budget.month)s.budget.month=d.budget.month;
+    if(!Array.isArray(s.events))s.events=[];
+    if(!Array.isArray(s.staples))s.staples=[];
+    if(!Array.isArray(s.shopList))s.shopList=[];
+    if(!Array.isArray(s.lifePlan))s.lifePlan=[];
+    if(!Array.isArray(s.memories))s.memories=[];
+    if(!s.planSub)s.planSub="kalender";
+    if(s.tab==="sjekk"){s.tab="kunnskap";s.kunnskap="sjekk"}
+    // Recover from profile backup if main blob lost setup
+    try{
+      const bak=JSON.parse(localStorage.getItem(KEY+".profile")||"null");
+      if(bak && bak.setup && (!s.setup || !s.nameA || !s.due)){
+        s.setup=true;
+        if(bak.nameA) s.nameA=bak.nameA;
+        if(bak.nameB) s.nameB=bak.nameB;
+        if(bak.due) s.due=bak.due;
+        if(bak.role) s.role=bak.role;
+      }
+    }catch(e){}
+    if(!s.setup && s.due && s.nameA && s.nameB){s.setup=true}
+    return s;
+  }catch(e){return defaults()}
+}
+
+function isEmbeddedBrowser(){
+  const ua=navigator.userAgent||"";
+  return /FBAN|FBAV|Instagram|Line\/|MicroMessenger|Snapchat|TikTok|Twitter/i.test(ua);
+}
+function storageAvailable(){
+  try{const k="__fv_t"; localStorage.setItem(k,"1"); const ok=localStorage.getItem(k)==="1"; localStorage.removeItem(k); return ok;}catch(e){return false}
+}
+async function restoreProfileFromIdbIfNeeded(){
+  if(state.setup && state.nameA && state.due) return;
+  const bak=await loadProfileIdb();
+  if(bak && bak.setup && bak.nameA && bak.due){
+    state.setup=true;
+    state.nameA=bak.nameA;
+    state.nameB=bak.nameB||"";
+    state.due=bak.due;
+    state.role=bak.role||state.role||"gravid";
+    try{save()}catch(e){}
+    render();
+  }
+}
+
+
+function saveProfileIdb(slim){
+  return openPhotoDb().then(function(db){
+    return new Promise(function(resolve,reject){
+      try{
+        const tx=db.transaction("photos","readwrite");
+        tx.objectStore("photos").put({
+          setup:!!slim.setup, nameA:slim.nameA||"", nameB:slim.nameB||"", due:slim.due||"", role:slim.role||"gravid", savedAt:Date.now()
+        }, "profile");
+        tx.oncomplete=function(){resolve()};
+        tx.onerror=function(){reject(tx.error)};
+      }catch(e){reject(e)}
+    });
+  });
+}
+function loadProfileIdb(){
+  return openPhotoDb().then(function(db){
+    return new Promise(function(resolve,reject){
+      try{
+        const tx=db.transaction("photos","readonly");
+        const req=tx.objectStore("photos").get("profile");
+        req.onsuccess=function(){resolve(req.result||null)};
+        req.onerror=function(){reject(req.error)};
+      }catch(e){reject(e)}
+    });
+  }).catch(function(){return null});
+}
+
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
 function save(){
   try{
-    const payload=JSON.stringify(state);
-    localStorage.setItem(KEY,payload);
+    // Never persist in-memory File/Blob or huge inline photoData in localStorage
+    const slim=JSON.parse(JSON.stringify(state, function(k,v){
+      if(v && typeof v==="object" && (v instanceof File || v instanceof Blob)) return undefined;
+      if(k==="photoData" || k==="_pendingMemFile" || k==="_pendingLifeFile") return undefined;
+      return v;
+    }));
+    const payload=JSON.stringify(slim);
+    localStorage.setItem(KEY, payload);
     const check=localStorage.getItem(KEY);
-    if(!check){throw new Error("empty");}
+    if(!check) throw new Error("empty");
     const parsed=JSON.parse(check);
-    if(state.setup && !parsed.setup){throw new Error("setup not persisted");}
+    if(state.setup && !parsed.setup) throw new Error("setup not persisted");
+    // Durable profile backup (survives some WebView quirks better when paired with IDB)
+    try{
+      localStorage.setItem(KEY+".profile", JSON.stringify({
+        setup:!!slim.setup, nameA:slim.nameA||"", nameB:slim.nameB||"", due:slim.due||"", role:slim.role||"gravid", savedAt:Date.now()
+      }));
+    }catch(e){}
+    saveProfileIdb(slim).catch(function(){});
   }catch(e){
     console.error(e);
-    alert("Kunne ikke lagre på denne telefonen. Er du i privat nettlesing, eller er lagringsplassen full? Prøv vanlig Safari (ikke Privat) og start appen på nytt.");
+    alert("Kunne ikke lagre på denne telefonen. Åpne siden i Safari (ikke Privat, ikke chat-vindu). Del → Åpne i Safari.");
   }
 }
 let _idb=null,_idbOk=null,_photoCache={},_pendingMemFile=null,_pendingLifeFile=null;
@@ -827,6 +920,7 @@ function render(){
  hydratePhotos();
 }
 function viewSetup(){return `<header class="app"><div><div class="brand">familien vår</div><h1 class="weekbig">Bare for dere to</h1><p class="setup-lead">En rolig oversikt over ukene, lagret bare på denne telefonen. Ingen konto og ingen sky.</p></div></header>
+<div class="card" id="storageWarn" style="display:none;border-color:#c0392b"><h3>Åpne i Safari først</h3><p>Du er i et chat-/app-vindu som ofte sletter data når det lukkes. Trykk <b>Del → Åpne i Safari</b>, og fyll inn der. Deretter kan du legge til på Hjem-skjerm.</p></div>
 <div class="card"><h3>Kom i gang</h3>
 <label>Navn gravid</label><input id="nameA" placeholder="Fornavn"/>
 <label>Navn partner</label><input id="nameB" placeholder="Fornavn"/>
@@ -1299,6 +1393,9 @@ function viewMore(){
 
 let mood=3, symp=new Set();
 function bind(){
+
+ const sw=document.getElementById("storageWarn");
+ if(sw){sw.style.display=(!storageAvailable()||isEmbeddedBrowser())?"block":"none"}
  document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>setTab(b.dataset.go));
  document.querySelectorAll("[data-kun]").forEach(b=>b.onclick=()=>{state.kunnskap=b.dataset.kun;save();render()});
  document.querySelectorAll("[data-chk]").forEach(cb=>cb.onchange=()=>{state.checks[cb.dataset.chk]=cb.checked;save()});
