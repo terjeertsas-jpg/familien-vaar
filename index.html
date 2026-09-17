@@ -2,14 +2,14 @@
 <html lang="no">
 <head>
 <meta charset="UTF-8"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline' https://unpkg.com https://www.gstatic.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://unpkg.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://*.googleapis.com https://firebase.googleapis.com https://firebaseinstallations.googleapis.com; worker-src blob: 'self'; frame-src 'none'; object-src 'none'; base-uri 'self';"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline' https://unpkg.com https://www.gstatic.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://unpkg.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://*.googleapis.com https://firebase.googleapis.com https://firebaseinstallations.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; worker-src blob: 'self'; frame-src 'none'; object-src 'none'; base-uri 'self';"/>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <meta name="theme-color" content="#5c3a36"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="familien vår"/>
 <title>familien vår</title>
-<meta name="app-build" content="sync-fix-1"/>
+<meta name="app-build" content="sync-fix-2"/>
 <link rel="manifest" href="manifest.json"/>
 <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1112,32 +1112,66 @@ function startSyncListener(){
   _fbUnsub=function(){ ref.off("value", handler); };
 }
 function createFamilySync(){
-  if(!getFirebaseConfig()){ alert("Firebase-config mangler. Hard-refresh appen (lukk og åpne på nytt), eller lim inn config under."); return; }
-  if(!ensureFirebase()){ alert(_syncStatusMsg||"Firebase er ikke klar."); return; }
-  const code=genFamilyCode();
-  state.syncCode=code;
-  state.syncEnabled=true;
-  state.syncRev=0;
-  const stripped=stripEphemeral(state);
-  const updatedAt=Date.now();
-  const payload={data:stripped.data, updatedAt:updatedAt, rev:1};
-  const ref=familyRef(code);
-  _syncOwnWriteUntil=Date.now()+1500;
-  ref.set(payload).then(function(){
-    state.syncRev=1;
-    state.syncUpdatedAt=updatedAt;
-    _syncLastApplied=updatedAt;
-    save(); // local persist + schedule (echo ignored)
-    startSyncListener();
-    _syncStatusMsg="Familiekode opprettet";
-    render();
-    alert("Familiekode: "+formatSyncCode(code)+"\\n\\nGi koden til Silje. Begge må ha samme Firebase-config.");
-  }).catch(function(e){
-    state.syncEnabled=false;
-    state.syncCode="";
-    alert("Kunne ikke opprette: "+(e&&e.message?e.message:e));
-    render();
-  });
+  try{
+    const cfg=getFirebaseConfig();
+    if(!cfg){ alert("Firebase-config mangler. Hard-refresh appen (lukk og åpne på nytt), eller lim inn config under."); return; }
+    if(typeof firebase==="undefined"){ alert("Firebase SDK mangler. Sjekk nettverket og hard-refresh."); return; }
+    const db=ensureFirebase();
+    if(!db){ alert(_syncStatusMsg||"Firebase er ikke klar. Sjekk nett/CSP."); return; }
+    const btn=document.getElementById("mkfamily");
+    if(btn){ btn.disabled=true; btn.textContent="Oppretter…"; }
+    _syncStatusMsg="Oppretter familiekode…";
+    const stEl=document.getElementById("syncStatus");
+    if(stEl) stEl.textContent=_syncStatusMsg;
+    const code=genFamilyCode();
+    state.syncCode=code;
+    state.syncEnabled=true;
+    state.syncRev=0;
+    let stripped;
+    try{ stripped=stripEphemeral(state); }
+    catch(se){
+      state.syncEnabled=false; state.syncCode="";
+      if(btn){ btn.disabled=false; btn.textContent="Opprett familiekode"; }
+      alert("Kunne ikke pakke data: "+(se&&se.message?se.message:se));
+      render(); return;
+    }
+    const updatedAt=Date.now();
+    const payload={data:(stripped&&stripped.data)||{}, updatedAt:updatedAt, rev:1};
+    const ref=familyRef(code);
+    if(!ref){
+      state.syncEnabled=false; state.syncCode="";
+      if(btn){ btn.disabled=false; btn.textContent="Opprett familiekode"; }
+      alert("Firebase-referanse mangler. Sjekk databaseURL i config.");
+      render(); return;
+    }
+    _syncOwnWriteUntil=Date.now()+2000;
+    const timer=setTimeout(function(){
+      _syncStatusMsg="Venter på Firebase… (tregt nett?)";
+      try{ const s2=document.getElementById("syncStatus"); if(s2) s2.textContent=_syncStatusMsg; }catch(_e){}
+    }, 4000);
+    ref.set(payload).then(function(){
+      clearTimeout(timer);
+      state.syncRev=1;
+      state.syncUpdatedAt=updatedAt;
+      _syncLastApplied=updatedAt;
+      _syncStatusMsg="Familiekode opprettet: "+formatSyncCode(code);
+      save();
+      startSyncListener();
+      render();
+      alert("Familiekode: "+formatSyncCode(code)+"\n\nSend koden til Silje. Hun trykker Koble til.");
+    }).catch(function(e){
+      clearTimeout(timer);
+      state.syncEnabled=false;
+      state.syncCode="";
+      _syncStatusMsg="Feil: "+(e&&e.message?e.message:e);
+      alert("Kunne ikke opprette: "+(e&&e.message?e.message:e));
+      render();
+    });
+  }catch(err){
+    console.error(err);
+    alert("Uventet feil: "+(err&&err.message?err.message:err));
+    try{ render(); }catch(_e){}
+  }
 }
 function joinFamilySync(rawCode){
   const code=String(rawCode||"").replace(/[^A-Za-z0-9]/g,"").toUpperCase();
@@ -1214,6 +1248,7 @@ function syncStatusHtml(){
   const cfg=getFirebaseConfig();
   const cfgOk=!!cfg;
   return `<div class="card" id="syncCard"><h3>Felles synk</h3>
+ <p class="tiny" id="syncStatus"></p>
  <p><b>Status:</b> ${on?"På":"Av"}${on?" · "+esc(code):""}${cfgOk?"":" · mangler Firebase-config"}</p>
  ${_syncStatusMsg?`<p class="tiny">${esc(_syncStatusMsg)}</p>`:""}
  <p class="tiny"><b>Slik gjør dere det:</b> Firebase er allerede koblet i appen. 1) Hard-refresh hvis noe feiler. 2) Én trykker «Opprett familiekode». 3) Den andre limer inn koden og trykker «Koble til». Da deler dere live state. </p>
