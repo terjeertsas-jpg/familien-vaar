@@ -757,7 +757,7 @@ function load(){
     if(!Array.isArray(s.shopList))s.shopList=[];
     if(!Array.isArray(s.lifePlan))s.lifePlan=[];
     if(!Array.isArray(s.memories))s.memories=[];if(!Array.isArray(s.supplements))s.supplements=[];
-    if(!s.planSub)s.planSub="kalender";
+    if(!s.planSub||!["kalender","handle","budsjett","livsplan","tilbakeblikk"].includes(s.planSub))s.planSub="kalender";
     if(s.tab==="sjekk"){s.tab="kunnskap";s.kunnskap="sjekk"}
     // Recover from profile backup if main blob lost setup
     try{
@@ -1114,7 +1114,7 @@ function viewHome(){
  <div class="card"><h3>Ukas tips (kunnskapsgrunnlag)</h3><p>${UKETIPS[w]||""}</p><p class="tiny">Kortversjon av offentlig råd. Original: Helsenorge / Helsedirektoratet / NAV. Ikke tilpasset din journal.</p></div>
  <div class="card"><h3>I dag</h3><p>${w?today:"Sett termin for å få uke-innhold."}</p>
  <p class="tiny">${w?"En konkret retning for dagen — ikke et krav.":""}</p>
- <div class="row"><button class="btn" data-go="uke">Hele uken</button><button class="btn2" data-go="kunnskap">Kost og næring</button></div></div>
+ <div class="row"><button class="btn" data-go="uke">Hele uken</button><button class="btn2" data-go="kunnskap">Kost og næring</button><button class="btn2" data-gokun="trening">Trening</button></div></div>
  <div class="card" id="goAppts" role="button" tabindex="0" style="cursor:pointer">
   <h3>Avtaler</h3>
   ${nextAppt()}
@@ -1300,9 +1300,72 @@ function viewWeek(){
  <div class="card"><h3>Bok</h3><p>${c.bok}</p></div>`
 }
 
+
+function viewKunnskapTrening(){
+  return `<div class="card" style="border-color:rgba(122,62,69,.28)">
+  <h3>Hvor mye (hovedsvar)</h3>
+  <p style="font-size:1.35rem;line-height:1.35;margin:8px 0 12px"><b>Minst 150 minutter</b> moderat aktivitet per uke.</p>
+  <p>Moderat = f.eks. rask gange der du blir litt andpusten, men kan snakke.</p>
+  <ul style="margin:8px 0 0;padding-left:1.2em">
+    <li>Fordel gjerne på <b>de fleste dager</b> (f.eks. 30 min × 5).</li>
+    <li><b>Styrke</b> for store muskelgrupper <b>2 dager</b> i uken (kroppsvekt, strikk eller lette vekter).</li>
+    <li><b>Bekkenbunn daglig:</b> 8–12 knip, hold 6–8 sek, 2–3 runder.</li>
+  </ul>
+  <p class="tiny" style="margin-top:12px">Trener du allerede hardt? Du kan ofte fortsette med tilpasning. Ved komplikasjoner eller usikkerhet: spør jordmor eller lege.</p>
+  <p class="tiny">Litt er bedre enn ingenting. Beveg deg daglig, få pulsen opp av og til, og sitt ikke for lenge stille.</p>
+</div>
+<div class="card">
+  <h3>Ukesmål (konkret forslag)</h3>
+  <ul class="clean">
+    <li><span>☐ 5× gange 20–30 min <span class="tiny">eller sykkel/svømming tilsvarende</span></span></li>
+    <li><span>☐ 2× styrke 20–30 min <span class="tiny">knebøy til stol, hoftebro, roing med strikk, vegg-armhevninger</span></span></li>
+    <li><span>☐ Hver dag: bekkenbunn + reis deg hver time hvis du sitter mye</span></li>
+  </ul>
+  <p class="tiny">Kryss i hodet eller på papir — dette er et forslag, ikke en karakter.</p>
+</div>
+<div class="card">
+  <h3>Økt: Gå 30 min</h3>
+  <p><b>5 min</b> rolig → <b>20 min</b> raskere snakk-tempo → <b>5 min</b> rolig.</p>
+  <p class="tiny">Du skal kunne snakke i hele snakk-delen. Stopp ved smerte eller ubehag.</p>
+</div>
+<div class="card">
+  <h3>Økt: Styrke hjemme 20 min</h3>
+  <p>2 runder. Pust jevnt — ikke hold pusten.</p>
+  <ul style="margin:8px 0 0;padding-left:1.2em">
+    <li>Knebøy til stol — 10–12</li>
+    <li>Hoftebro (liggende) — 10–12</li>
+    <li>Roing med strikk (eller håndkle) — 10–12</li>
+    <li>Vegg-armhevninger — 8–12</li>
+  </ul>
+  <p class="tiny">Lette vekter/strikk er nok. Unngå øvelser som gir stort trykk i magen.</p>
+</div>
+<div class="card">
+  <h3>Økt: Bekkenbunn 5 min</h3>
+  <p>Knipe rundt endetarm, skjede og urinrør — løft opp og innover. Hold <b>6–8 sek</b>. Slipp helt.</p>
+  <p><b>8–12 knip</b> × <b>2–3 runder</b>. Kan gjøres liggende, sittende eller stående.</p>
+  <p class="tiny">Usikker på teknikken? Spør jordmor, lege eller fysioterapeut.</p>
+</div>
+<div class="card">
+  <h3>Unngå / pause</h3>
+  <ul style="margin:0;padding-left:1.2em">
+    <li>Kontaktsport og aktiviteter med fallrisiko eller hardt støt mot magen</li>
+    <li>Dykking</li>
+    <li>Hard magetrening flat på rygg sent i svangerskapet (lange økter i ryggleie)</li>
+    <li>Overoppheting (veldig varmt / høy luftfuktighet)</li>
+    <li>De tyngste løftene — bøy i kne og hofter, hold tett inntil kroppen</li>
+  </ul>
+  <p style="margin-top:12px"><b>Stopp og kontakt helsevesen</b> ved smerte, svimmelhet, blødning, vannavgang eller mindre liv.</p>
+</div>
+<div class="card">
+  <h3>Kilde</h3>
+  <p><a href="https://www.helsenorge.no/gravid/trening-graviditet-og-fodsel/" target="_blank" rel="noopener">Helsenorge — trening i graviditet og etter fødsel</a></p>
+  <p class="tiny">Kortversjon av offentlig råd (Helsenorge / Helsedirektoratet). Appen erstatter ikke jordmor, fastlege eller fysioterapeut. Tilpass etter egen form og eventuelle komplikasjoner.</p>
+</div>`;
+}
+
 function viewKunnskap(){
  const sub=state.kunnskap||"oversikt";
- const nav=[["oversikt","Oversikt"],["ja","Kan spise"],["nei","Unngå"],["mikro","Mikronæring"],["tilskudd","Mine tilskudd"],["handling","Gjøre"],["to","Dere to"],["kurs","Kurs"],["sjekk","Sjekkliste"]];
+ const nav=[["oversikt","Oversikt"],["trening","Trening"],["handling","Gjøre"],["ja","Kan spise"],["nei","Unngå"],["mikro","Mikronæring"],["tilskudd","Mine tilskudd"],["to","Dere to"],["kurs","Kurs"],["sjekk","Sjekkliste"]];
  const pills=nav.map(([id,l])=>`<button class="pill" data-kun="${id}" style="${sub===id?"background:var(--rose-soft,#f3e2dc);color:var(--ink);border-color:rgba(122,62,69,.22);font-weight:600":""}">${l}</button>`).join("");
  let body="";
  if(sub==="oversikt") body=`<div class="card"><h3>Kilder</h3>
@@ -1310,7 +1373,13 @@ function viewKunnskap(){
  <p><a href="https://www.helsenorge.no/gravid/mat-og-drikke-som-gravide-ikke-bor-spise/" target="_blank">Helsenorge — unngå</a></p>
  <p><a href="https://www.helsenorge.no/gravid/trening-graviditet-og-fodsel/" target="_blank">Helsenorge — trening</a></p>
  <p><a href="https://gravidhjelpen.no/" target="_blank">Gravidhjelpen.no</a> — 107 punkter uke for uke. Her er kjernen.</p>
- <p class="tiny">Du spiser ikke for to. Ekstra energi ca. 100 kcal i 1. trimester, 300 i 2. og 500 i 3.</p></div>`;
+ <p class="tiny">Du spiser ikke for to. Ekstra energi ca. 100 kcal i 1. trimester, 300 i 2. og 500 i 3.</p></div>
+ <div class="card" style="cursor:pointer" data-kun="trening" role="button" tabindex="0">
+  <h3>Trening — hvor mye og konkrete økter</h3>
+  <p>Hovedsvar: minst <b>150 min</b> moderat aktivitet per uke, plus styrke 2 dager og bekkenbunn daglig.</p>
+  <p class="tiny">Trykk for ferdige mini-økter og ukesmål.</p>
+ </div>`;
+ if(sub==="trening") body=viewKunnskapTrening();
  if(sub==="ja") body=EAT_YES.map(([t,n])=>`<div class="card"><h3>${t}</h3><p>${n}</p></div>`).join("");
  if(sub==="nei") body=EAT_NO.map(([t,n])=>`<div class="card"><h3>${t}</h3><p>${n}</p></div>`).join("");
 
@@ -1540,17 +1609,61 @@ function viewPlanLivsplan(){
   <div class="card"><h3>Deres liste</h3><ul class="clean">${list}</ul></div>`;
 }
 
+function viewPlanTilbakeblikk(){
+  const filter=state._memFilter||"alle";
+  const editing=state._editMemId?(state.memories||[]).find(x=>x.id===state._editMemId):null;
+  let mems=(state.memories||[]).slice();
+  if(filter==="gravid") mems=mems.filter(m=>m.kind==="gravid");
+  else if(filter==="liv") mems=mems.filter(m=>m.kind==="liv");
+  mems.sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const kindLabel=k=>k==="gravid"?"Graviditet":"Livsmål";
+  const memTitles=new Set((state.memories||[]).map(m=>(m.title||"").toLowerCase()));
+  const doneLife=(filter==="gravid"?[]:(state.lifePlan||[]).filter(it=>(it.status||"")==="done"&&!memTitles.has((it.title||"").toLowerCase())));
+  const filters=[["alle","Alle"],["gravid","Graviditet"],["liv","Livsmål"]].map(([id,l])=>`<button class="pill" data-memfilter="${id}" style="${filter===id?"background:var(--rose-soft,#f3e2dc);color:var(--ink);border-color:rgba(122,62,69,.22);font-weight:600":""}">${l}</button>`).join("");
+  const list=mems.length?mems.map(m=>`<li class="mem-row">${memThumbHtml(m.photoKey,m.photoData)}<div class="mem-body"><b>${esc(m.title)}</b> <span class="kind-badge">${kindLabel(m.kind)}</span><div class="tiny">${esc(m.date||"")}${m.note?" · "+esc(m.note):""}</div>
+  <div class="row" style="margin-top:6px">
+    <button class="btn2" data-editmem="${esc(m.id)}">Rediger</button>
+    <button class="btn2" data-delmem="${esc(m.id)}">Slett</button>
+  </div></div></li>`).join(""):`<p class="sub">Ingen milepæler ennå. Hva med den første ultralyden, den positive testen, eller dagen dere flyttet inn — bare eksempler. Legg inn det som betyr noe for dere.</p>`;
+  const secondary=doneLife.length?`<div class="card"><h3>Fullførte livsmål</h3><p class="tiny">Ferdige mål som ikke allerede er lagret som minne.</p><ul class="clean">${doneLife.map(it=>`<li><div style="flex:1;min-width:0"><b>${esc(it.title)}</b> <span class="kind-badge">Livsmål</span><div class="tiny">${esc(it.when||"")}${it.note?" · "+esc(it.note):""}</div></div></li>`).join("")}</ul></div>`:"";
+  const idbWarn=state._idbLimited?`<p class="warn">IndexedDB er ikke tilgjengelig her. Bilder lagres begrenset på telefonen — bare noen få bilder.</p>`:"";
+  return `<div class="card"><h3>Tilbakeblikk</h3>
+  <p>Dette er deres private tilbakeblikk — milepæler og bilder som blir på telefonen. Ingen sky, ingen deling.</p>
+  ${idbWarn}</div>
+  <div class="card"><h3>${editing?"Rediger minne":"Nytt minne"}</h3>
+  <label>Tittel</label><input id="memtitle" value="${esc(editing?editing.title:"")}" placeholder="F.eks. første ultralyd"/>
+  <label>Dato</label><input id="memdate" type="date" value="${esc(editing?editing.date||"":"")}"/>
+  <label>Type</label><select id="memkind">
+    <option value="gravid" ${!editing||editing.kind==="gravid"?"selected":""}>Graviditet</option>
+    <option value="liv" ${editing&&editing.kind==="liv"?"selected":""}>Livsmål</option>
+  </select>
+  <label>Note</label><textarea id="memnote" placeholder="Valgfritt">${esc(editing?editing.note||"":"")}</textarea>
+  <label>Bilde (valgfritt)</label><input id="memphoto" type="file" accept="image/*" capture="environment"/>
+  ${editing&&(editing.photoKey||editing.photoData)?`<p class="tiny">Dette minnet har allerede et bilde. Velg et nytt for å bytte.</p>`:""}
+  <div class="row" style="margin-top:12px"><button class="btn" id="savemem">${editing?"Lagre":"Legg til"}</button>${editing?`<button class="btn2" id="cancelmem">Avbryt</button>`:""}</div></div>
+  <div class="pills" style="margin-bottom:8px">${filters}</div>
+  <div class="card"><h3>Tidslinje</h3><ul class="clean">${list}</ul></div>
+  ${secondary}`;
+}
+
 function viewPlan(){
-  const sub=state.planSub||"kalender";
+  const allowed=["kalender","handle","budsjett","livsplan","tilbakeblikk"];
+  let sub=state.planSub||"kalender";
+  if(!allowed.includes(sub)){sub="kalender";state.planSub="kalender"}
   const nav=[["kalender","Kalender"],["handle","Handleliste"],["budsjett","Budsjett"],["livsplan","Livsplan"],["tilbakeblikk","Tilbakeblikk"]];
   const pills=nav.map(([id,l])=>`<button class="pill" data-plansub="${id}" style="${sub===id?"background:var(--rose-soft,#f3e2dc);color:var(--ink);border-color:rgba(122,62,69,.22);font-weight:600":""}">${l}</button>`).join("");
   let body="";
-  if(sub==="kalender") body=viewPlanKalender();
-  else if(sub==="handle") body=viewPlanHandle();
-  else if(sub==="budsjett") body=viewPlanBudsjett();
-  else if(sub==="livsplan") body=viewPlanLivsplan();
-  else if(sub==="tilbakeblikk") body=viewPlanTilbakeblikk();
-  else body=viewPlanLivsplan();
+  try{
+    if(sub==="kalender") body=viewPlanKalender();
+    else if(sub==="handle") body=viewPlanHandle();
+    else if(sub==="budsjett") body=viewPlanBudsjett();
+    else if(sub==="livsplan") body=viewPlanLivsplan();
+    else if(sub==="tilbakeblikk") body=viewPlanTilbakeblikk();
+    else body=viewPlanKalender();
+  }catch(e){
+    console.error("Plan sub error",sub,e);
+    body=`<div class="card"><h3>Noe gikk galt</h3><p class="tiny">Denne delen kunne ikke vises. Prøv Kalender.</p></div>`;
+  }
   return `<header class="app"><div><div class="brand">Plan</div><h1 class="weekbig">Felles oversikt</h1><div class="sub">Kalender, handleliste, budsjett, livsmål og tilbakeblikk — lagret bare her.</div></div></header>
   <div class="pills" style="margin-bottom:8px">${pills}</div>${body}`;
 }
@@ -1731,6 +1844,7 @@ function bind(){
  };
 
  document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>setTab(b.dataset.go));
+ document.querySelectorAll("[data-gokun]").forEach(b=>b.onclick=()=>{state.kunnskap=b.dataset.gokun;setTab("kunnskap")});
  document.querySelectorAll("[data-kun]").forEach(b=>b.onclick=()=>{state.kunnskap=b.dataset.kun;save();render()});
  document.querySelectorAll("[data-chk]").forEach(cb=>cb.onchange=()=>{state.checks[cb.dataset.chk]=cb.checked;save()});
  document.querySelectorAll("[data-browse]").forEach(b=>b.onclick=()=>{const actual=weekNum()||12;const cur=state.browseWeek||actual;state.browseWeek=Math.min(42,Math.max(4,cur+Number(b.dataset.browse)));save();render()});
