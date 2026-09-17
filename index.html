@@ -398,6 +398,51 @@ const MICRO=[
  how:"1 middag med laks (ca. 150 g) dekker DHA for flere dager. Makrell i tomat som pålegg flere ganger i uken bidrar. Spiser dere lite fet fisk: spør jordmor om tilskudd (algeolje hvis vegansk). Unngå fisk med høyt miljøgiftnivå (se listen under Unngå)."}
 ];
 
+
+const NUTRIENT_TARGETS={
+  folate:{label:"Folat", unit:"µg", target:400, note:"Særlig viktig til uke 12 som tablett."},
+  d:{label:"D-vitamin", unit:"µg", target:10, note:"Hele svangerskapet."},
+  iodine:{label:"Jod", unit:"µg", target:200, note:"Ikke over 600 µg."},
+  iron:{label:"Jern", unit:"mg", target:null, note:"Dose etter ferritin — appen kan ikke friskmelde."},
+  calcium:{label:"Kalsium", unit:"mg", target:950, note:"Ofte via meieri + ev. tilskudd."},
+  b12:{label:"B12", unit:"µg", target:4.5, note:"Mat dekker ofte; vegan trenger tilskudd."},
+  dha:{label:"DHA/omega-3", unit:"mg", target:200, note:"Ofte via fet fisk eller olje."}
+};
+const SUPPLEMENT_PRESETS=[
+  {id:"folate400", name:"Folsyre / folat 400 µg", nutrients:{folate:400}},
+  {id:"tran", name:"Tran (1 barneskje / ca. 5 ml)", nutrients:{d:10, dha:400}},
+  {id:"d10", name:"D-vitamin 10 µg (400 IE)", nutrients:{d:10}},
+  {id:"d20", name:"D-vitamin 20 µg (800 IE)", nutrients:{d:20}},
+  {id:"iodine150", name:"Jod 150 µg", nutrients:{iodine:150}},
+  {id:"iron40", name:"Jern 40 mg", nutrients:{iron:40}},
+  {id:"iron60", name:"Jern 60 mg", nutrients:{iron:60}},
+  {id:"calcium500", name:"Kalsium 500 mg", nutrients:{calcium:500}},
+  {id:"b12", name:"B12 2,5–5 µg (tablett)", nutrients:{b12:4.5}},
+  {id:"omega", name:"Omega-3 / algeolje (typisk gravid)", nutrients:{dha:200}},
+  {id:"multi", name:"Gravid-multivitamin (typisk)", nutrients:{folate:400,d:10,iodine:150,b12:2.5, calcium:0}, note:"Sjekk etiketten — innhold varierer mellom merker."},
+  {id:"multi_no_iodine", name:"Gravid-multi uten jod (typisk)", nutrients:{folate:400,d:10,b12:2.5}, note:"Mange multi mangler jod. Sjekk etiketten."}
+];
+function sumSupplementNutrients(){
+  const sum={folate:0,d:0,iodine:0,iron:0,calcium:0,b12:0,dha:0};
+  (state.supplements||[]).filter(s=>s.active!==false).forEach(s=>{
+    const n=s.nutrients||{};
+    Object.keys(sum).forEach(k=>{sum[k]+=(Number(n[k])||0)});
+  });
+  return sum;
+}
+function nutrientCoverage(){
+  const sum=sumSupplementNutrients();
+  return Object.keys(NUTRIENT_TARGETS).map(k=>{
+    const meta=NUTRIENT_TARGETS[k];
+    const got=sum[k]||0;
+    let status="mangler";
+    if(meta.target==null) status = got>0 ? "avklar" : "avklar";
+    else if(got>=meta.target) status="nok";
+    else if(got>0) status="delvis";
+    else status="mangler";
+    return {key:k, label:meta.label, unit:meta.unit, target:meta.target, got, status, note:meta.note};
+  });
+}
 const ACTIONS=[
 {t:"Røyk, snus og alkohol",n:"Alt går over morkaken. Ingen kjent trygg alkoholdose. Slutt så tidlig som mulig — jordmor har verktøy."},
 {t:"Gange 2,5–5 t/uke",n:"Mer blod gjennom morkaken, bedre glukosebruk, passe vektøkning. Litt varm og andpusten."},
@@ -633,7 +678,7 @@ const HILSEN={
 };
 const KEY="ossto.v1";
 const state=load();
-function defaults(){return{nameA:"",nameB:"",due:"",role:"gravid",setup:false,logs:[],kicks:[],weights:[],appts:[],notes:"",shop:{},bag:{},names:[],contractions:[],checks:{},tab:"hjem",browseWeek:null,kunnskap:"oversikt",phoneFode:"",phoneLege:"",bt:[],sf:[],water:[],meds:[],questions:"",birthplan:"",vax:{},contacts:"",planSub:"kalender",events:[],staples:[],shopList:[],budget:{income:[],expense:[],month:new Date().toISOString().slice(0,7)},lifePlan:[],memories:[]}}
+function defaults(){return{nameA:"",nameB:"",due:"",role:"gravid",setup:false,logs:[],kicks:[],weights:[],appts:[],notes:"",shop:{},bag:{},names:[],contractions:[],checks:{},tab:"hjem",browseWeek:null,kunnskap:"oversikt",phoneFode:"",phoneLege:"",bt:[],sf:[],water:[],meds:[],questions:"",birthplan:"",vax:{},contacts:"",planSub:"kalender",events:[],staples:[],shopList:[],budget:{income:[],expense:[],month:new Date().toISOString().slice(0,7)},lifePlan:[],memories:[],supplements:[]}}
 function load(){
   try{
     const raw=JSON.parse(localStorage.getItem(KEY)||"{}");
@@ -647,7 +692,7 @@ function load(){
     if(!Array.isArray(s.staples))s.staples=[];
     if(!Array.isArray(s.shopList))s.shopList=[];
     if(!Array.isArray(s.lifePlan))s.lifePlan=[];
-    if(!Array.isArray(s.memories))s.memories=[];
+    if(!Array.isArray(s.memories))s.memories=[];if(!Array.isArray(s.supplements))s.supplements=[];
     if(!s.planSub)s.planSub="kalender";
     if(s.tab==="sjekk"){s.tab="kunnskap";s.kunnskap="sjekk"}
     // Recover from profile backup if main blob lost setup
@@ -1118,7 +1163,7 @@ function viewWeek(){
 
 function viewKunnskap(){
  const sub=state.kunnskap||"oversikt";
- const nav=[["oversikt","Oversikt"],["ja","Kan spise"],["nei","Unngå"],["mikro","Mikronæring"],["handling","Gjøre"],["to","Dere to"],["kurs","Kurs"],["sjekk","Sjekkliste"]];
+ const nav=[["oversikt","Oversikt"],["ja","Kan spise"],["nei","Unngå"],["mikro","Mikronæring"],["tilskudd","Mine tilskudd"],["handling","Gjøre"],["to","Dere to"],["kurs","Kurs"],["sjekk","Sjekkliste"]];
  const pills=nav.map(([id,l])=>`<button class="pill" data-kun="${id}" style="${sub===id?"background:var(--rose-soft,#f3e2dc);color:var(--ink);border-color:rgba(122,62,69,.22);font-weight:600":""}">${l}</button>`).join("");
  let body="";
  if(sub==="oversikt") body=`<div class="card"><h3>Kilder</h3>
@@ -1129,6 +1174,37 @@ function viewKunnskap(){
  <p class="tiny">Du spiser ikke for to. Ekstra energi ca. 100 kcal i 1. trimester, 300 i 2. og 500 i 3.</p></div>`;
  if(sub==="ja") body=EAT_YES.map(([t,n])=>`<div class="card"><h3>${t}</h3><p>${n}</p></div>`).join("");
  if(sub==="nei") body=EAT_NO.map(([t,n])=>`<div class="card"><h3>${t}</h3><p>${n}</p></div>`).join("");
+
+ if(sub==="tilskudd"){
+  const cov=nutrientCoverage();
+  const statusLabel={nok:"Ser ut til å dekke referanse",delvis:"Delvis via tilskudd",mangler:"Ikke dekket av tilskudd ennå",avklar:"Må avklares med jordmor"};
+  const statusCol={nok:"#2d6a4f",delvis:"#9a6b2f",mangler:"#8b3a3a",avklar:"#5c4a3a"};
+  const covHtml=cov.map(c=>`<div class="card" style="padding:12px 14px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><b>${c.label}</b><span class="pill" style="padding:4px 10px;font-size:11px;color:${statusCol[c.status]}">${statusLabel[c.status]}</span></div>
+  <p class="tiny" style="margin:6px 0 0">Fra dine tilskudd: <b>${c.got}</b> ${c.unit}${c.target!=null?` · referanse ca. ${c.target} ${c.unit}/dag`:""}</p>
+  <p class="tiny">${c.note} Mat kommer i tillegg og er ikke regnet inn her.</p></div>`).join("");
+  const list=(state.supplements||[]).map(s=>{
+    const bits=Object.entries(s.nutrients||{}).filter(([,v])=>v).map(([k,v])=>`${NUTRIENT_TARGETS[k]?NUTRIENT_TARGETS[k].label:k} ${v}${NUTRIENT_TARGETS[k]?NUTRIENT_TARGETS[k].unit:""}`).join(" · ");
+    return `<li><div style="flex:1;min-width:0"><label class="chk" style="margin:0"><input type="checkbox" data-supactive="${esc(s.id)}" ${s.active!==false?"checked":""}><span><b>${esc(s.name)}</b></span></label><div class="tiny">${esc(bits)}${s.note?" · "+esc(s.note):""}</div></div><button class="btn2" data-delsup="${esc(s.id)}">Fjern</button></li>`;
+  }).join("")||"<p class='sub'>Ingen faste tilskudd lagt inn ennå. Velg fra listen under.</p>";
+  const presets=SUPPLEMENT_PRESETS.filter(pr=>(state.supplements||[]).every(s=>s.presetId!==pr.id)).map(pr=>`<button type="button" class="pill" data-addsup="${esc(pr.id)}" style="margin:0 8px 8px 0;padding:8px 12px">${esc(pr.name)}</button>`).join("");
+  body=`<p class="tiny"><b>Veiledende oversikt.</b> Appen ser bare på det dere krysser inn som tilskudd — ikke blodprøver, ikke alt i maten. Den erstatter ikke jordmor. Jern vurderes etter ferritin.</p>
+  <div class="card"><h3>Dekning vs. referanse (tilskudd)</h3>${covHtml}</div>
+  <div class="card"><h3>Hun tar fast</h3><ul class="clean">${list}</ul>
+  <p class="tiny">Fjern avhuking for dager uten, eller slett hvis det ikke lenger brukes.</p></div>
+  <div class="card"><h3>Legg til vanlig tilskudd</h3>
+  <div>${presets||"<span class='tiny'>Alle forhåndsvalg er lagt inn. Du kan fortsatt legge til eget under.</span>"}</div>
+  <label>Eget tilskudd (navn)</label><input id="supname" placeholder="F.eks. apotekets gravid-multi"/>
+  <label>Folat µg</label><input id="supfolate" type="number" min="0" step="1" placeholder="0"/>
+  <label>D-vitamin µg</label><input id="supd" type="number" min="0" step="0.1" placeholder="0"/>
+  <label>Jod µg</label><input id="supiodine" type="number" min="0" step="1" placeholder="0"/>
+  <label>Jern mg</label><input id="supiron" type="number" min="0" step="1" placeholder="0"/>
+  <label>Kalsium mg</label><input id="supcalcium" type="number" min="0" step="1" placeholder="0"/>
+  <label>B12 µg</label><input id="supb12" type="number" min="0" step="0.1" placeholder="0"/>
+  <label>DHA mg</label><input id="supdha" type="number" min="0" step="1" placeholder="0"/>
+  <button class="btn" id="addsupcustom" type="button">Legg til eget</button>
+  <p class="tiny">Les etiketten. «Typisk multi» er et anslag — bytt til eget hvis innholdet avviker.</p></div>`;
+ }
+
  if(sub==="mikro") body=`<p class="tiny">Tallene er veiledende referanseinntak per dag (Helsenorge / Helsedirektoratet-tradisjon). Porsjoner er omtrentlige. Appen erstatter ikke jordmor. Tablett erstatter ikke mat — og mat erstatter ikke folattablett til uke 12.</p>`+MICRO.map(m=>`<div class="card"><h3>${m.n}</h3><p class="tiny" style="margin:0 0 4px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;color:var(--muted)">Referanseinntak / dag</p><p><b>${m.ref||m.d}</b></p><p class="tiny" style="margin:12px 0 4px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;color:var(--muted)">Hvorfor</p><p>${m.why||m.h}</p><p class="tiny" style="margin:12px 0 4px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;color:var(--muted)">Slik får du nok</p><p>${m.how||m.p}</p></div>`).join("");
  if(sub==="to") body=TO.map(a=>`<div class="card"><h3>${a.t}</h3><p>${a.n}</p></div>`).join("");
  if(sub==="handling") body=ACTIONS.map(a=>`<div class="card"><h3>${a.t}</h3><p>${a.n}</p></div>`).join("");
@@ -1482,6 +1558,38 @@ function bind(){
   goAp.onclick=openAppts;
   goAp.onkeydown=(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openAppts()}};
  }
+
+ 
+ document.querySelectorAll("[data-addsup]").forEach(b=>b.onclick=()=>{
+  const pr=SUPPLEMENT_PRESETS.find(x=>x.id===b.dataset.addsup); if(!pr)return;
+  state.supplements=state.supplements||[];
+  if(state.supplements.some(s=>s.presetId===pr.id))return;
+  state.supplements.push({id:uid(), presetId:pr.id, name:pr.name, nutrients:Object.assign({},pr.nutrients), note:pr.note||"", active:true});
+  save(); render();
+ });
+ document.querySelectorAll("[data-delsup]").forEach(b=>b.onclick=()=>{
+  state.supplements=(state.supplements||[]).filter(s=>s.id!==b.dataset.delsup); save(); render();
+ });
+ document.querySelectorAll("[data-supactive]").forEach(cb=>cb.onchange=()=>{
+  const it=(state.supplements||[]).find(s=>s.id===cb.dataset.supactive); if(it){it.active=cb.checked; save(); render()}
+ });
+ const addc=document.getElementById("addsupcustom");
+ if(addc) addc.onclick=()=>{
+  const name=(document.getElementById("supname").value||"").trim();
+  if(!name){alert("Skriv navn på tilskuddet.");return}
+  const nutrients={
+    folate:Number(document.getElementById("supfolate").value)||0,
+    d:Number(document.getElementById("supd").value)||0,
+    iodine:Number(document.getElementById("supiodine").value)||0,
+    iron:Number(document.getElementById("supiron").value)||0,
+    calcium:Number(document.getElementById("supcalcium").value)||0,
+    b12:Number(document.getElementById("supb12").value)||0,
+    dha:Number(document.getElementById("supdha").value)||0
+  };
+  state.supplements=state.supplements||[];
+  state.supplements.push({id:uid(), name, nutrients, note:"Eget tilskudd", active:true});
+  save(); render();
+ };
 
  document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>setTab(b.dataset.go));
  document.querySelectorAll("[data-kun]").forEach(b=>b.onclick=()=>{state.kunnskap=b.dataset.kun;save();render()});
