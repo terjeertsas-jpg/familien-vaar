@@ -634,9 +634,21 @@ const HILSEN={
 const KEY="ossto.v1";
 const state=load();
 function defaults(){return{nameA:"",nameB:"",due:"",role:"gravid",setup:false,logs:[],kicks:[],weights:[],appts:[],notes:"",shop:{},bag:{},names:[],contractions:[],checks:{},tab:"hjem",browseWeek:null,kunnskap:"oversikt",phoneFode:"",phoneLege:"",bt:[],sf:[],water:[],meds:[],questions:"",birthplan:"",vax:{},contacts:"",planSub:"kalender",events:[],staples:[],shopList:[],budget:{income:[],expense:[],month:new Date().toISOString().slice(0,7)},lifePlan:[],memories:[]}}
-function load(){try{const raw=JSON.parse(localStorage.getItem(KEY)||"{}");const d=defaults();const s=Object.assign({},d,raw);s.budget=Object.assign({},d.budget,raw.budget||{});if(!Array.isArray(s.budget.income))s.budget.income=[];if(!Array.isArray(s.budget.expense))s.budget.expense=[];if(!s.budget.month)s.budget.month=d.budget.month;if(!Array.isArray(s.events))s.events=[];if(!Array.isArray(s.staples))s.staples=[];if(!Array.isArray(s.shopList))s.shopList=[];if(!Array.isArray(s.lifePlan))s.lifePlan=[];if(!Array.isArray(s.memories))s.memories=[];if(!s.planSub)s.planSub="kalender";if(s.tab==="sjekk"){s.tab="kunnskap";s.kunnskap="sjekk"}return s}catch(e){return defaults()}}
+function load(){try{const raw=JSON.parse(localStorage.getItem(KEY)||"{}");const d=defaults();const s=Object.assign({},d,raw);s.budget=Object.assign({},d.budget,raw.budget||{});if(!Array.isArray(s.budget.income))s.budget.income=[];if(!Array.isArray(s.budget.expense))s.budget.expense=[];if(!s.budget.month)s.budget.month=d.budget.month;if(!Array.isArray(s.events))s.events=[];if(!Array.isArray(s.staples))s.staples=[];if(!Array.isArray(s.shopList))s.shopList=[];if(!Array.isArray(s.lifePlan))s.lifePlan=[];if(!Array.isArray(s.memories))s.memories=[];if(!s.planSub)s.planSub="kalender";if(s.tab==="sjekk"){s.tab="kunnskap";s.kunnskap="sjekk"}if(!s.setup&&s.due&&s.nameA&&s.nameB){s.setup=true}return s}catch(e){return defaults()}}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
-function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+function save(){
+  try{
+    const payload=JSON.stringify(state);
+    localStorage.setItem(KEY,payload);
+    const check=localStorage.getItem(KEY);
+    if(!check){throw new Error("empty");}
+    const parsed=JSON.parse(check);
+    if(state.setup && !parsed.setup){throw new Error("setup not persisted");}
+  }catch(e){
+    console.error(e);
+    alert("Kunne ikke lagre på denne telefonen. Er du i privat nettlesing, eller er lagringsplassen full? Prøv vanlig Safari (ikke Privat) og start appen på nytt.");
+  }
+}
 let _idb=null,_idbOk=null,_photoCache={},_pendingMemFile=null,_pendingLifeFile=null;
 function openPhotoDb(){
   return new Promise(function(resolve,reject){
@@ -1292,7 +1304,25 @@ function bind(){
  document.querySelectorAll("[data-chk]").forEach(cb=>cb.onchange=()=>{state.checks[cb.dataset.chk]=cb.checked;save()});
  document.querySelectorAll("[data-browse]").forEach(b=>b.onclick=()=>{const actual=weekNum()||12;const cur=state.browseWeek||actual;state.browseWeek=Math.min(42,Math.max(4,cur+Number(b.dataset.browse)));save();render()});
  const fs=document.getElementById("finishsetup");
- if(fs) fs.onclick=()=>{state.nameA=document.getElementById("nameA").value;state.nameB=document.getElementById("nameB").value;state.due=document.getElementById("due").value;state.role=document.getElementById("role").value;if(!state.due){alert("Skriv inn termin først.");return}state.setup=true;save();setTab("hjem")};
+ if(fs) fs.onclick=()=>{
+  state.nameA=(document.getElementById("nameA").value||"").trim();
+  state.nameB=(document.getElementById("nameB").value||"").trim();
+  state.due=document.getElementById("due").value;
+  state.role=document.getElementById("role").value;
+  if(!state.nameA||!state.nameB){alert("Skriv inn begge navnene.");return}
+  if(!state.due){alert("Skriv inn termin først.");return}
+  state.setup=true;
+  save();
+  // verify round-trip on this address
+  try{
+    const again=JSON.parse(localStorage.getItem(KEY)||"{}");
+    if(!again.setup||again.nameA!==state.nameA){
+      alert("Lagringen tok ikke. Bruk vanlig Safari (ikke Privat), åpne den faste GitHub-adressen, og prøv igjen.");
+      return;
+    }
+  }catch(e){}
+  setTab("hjem");
+};
  document.querySelectorAll("#moods button").forEach(b=>b.onclick=()=>{mood=Number(b.dataset.mood);document.querySelectorAll("#moods button").forEach(x=>x.classList.toggle("on",x===b))});
  document.querySelectorAll("#symp button").forEach(b=>b.onclick=()=>{const s=b.dataset.s;if(symp.has(s))symp.delete(s);else symp.add(s);b.style.background=symp.has(s)?"#e7cfd4":""});
  const sl=document.getElementById("savelog");
