@@ -666,6 +666,56 @@ function load(){
   }catch(e){return defaults()}
 }
 
+
+function isStandaloneApp(){
+  return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || !!navigator.standalone;
+}
+function profileTransferPayload(){
+  return {
+    v:1,
+    setup:true,
+    nameA:state.nameA||"",
+    nameB:state.nameB||"",
+    due:state.due||"",
+    role:state.role||"gravid"
+  };
+}
+function encodeProfileTransfer(obj){
+  const json=JSON.stringify(obj);
+  const b64=btoa(unescape(encodeURIComponent(json))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  return b64;
+}
+function decodeProfileTransfer(b64){
+  try{
+    const pad=b64.length%4===0?"":"====".slice(b64.length%4);
+    const norm=b64.replace(/-/g,"+").replace(/_/g,"/")+pad;
+    const json=decodeURIComponent(escape(atob(norm)));
+    return JSON.parse(json);
+  }catch(e){return null}
+}
+function buildTransferUrl(){
+  const base=location.href.split("#")[0].split("?")[0];
+  return base+"#fv="+encodeProfileTransfer(profileTransferPayload());
+}
+function applyTransferProfile(p){
+  if(!p||!p.due||!p.nameA||!p.nameB)return false;
+  state.setup=true;
+  state.nameA=p.nameA;
+  state.nameB=p.nameB;
+  state.due=p.due;
+  state.role=p.role||"gravid";
+  save();
+  return true;
+}
+function consumeTransferHash(){
+  const m=(location.hash||"").match(/^#fv=([A-Za-z0-9_-]+)/);
+  if(!m)return false;
+  const data=decodeProfileTransfer(m[1]);
+  if(!applyTransferProfile(data))return false;
+  history.replaceState(null,"",location.pathname+location.search);
+  return true;
+}
+
 function isEmbeddedBrowser(){
   const ua=navigator.userAgent||"";
   return /FBAN|FBAV|Instagram|Line\/|MicroMessenger|Snapchat|TikTok|Twitter/i.test(ua);
@@ -920,6 +970,7 @@ function render(){
  hydratePhotos();
 }
 function viewSetup(){return `<header class="app"><div><div class="brand">familien vår</div><h1 class="weekbig">Bare for dere to</h1><p class="setup-lead">En rolig oversikt over ukene, lagret bare på denne telefonen. Ingen konto og ingen sky.</p></div></header>
+<div class="card" id="standaloneHint" style="display:none"><h3>Hjem-skjerm har eget lager</h3><p>På iPhone deler ikke Hjem-skjerm-appen lager med Safari. Fyll inn navn og termin <b>i denne Hjem-skjerm-appen</b>, eller bruk overføringslenke fra Safari under Mer.</p></div>
 <div class="card" id="storageWarn" style="display:none;border-color:#c0392b"><h3>Åpne i Safari først</h3><p>Du er i et chat-/app-vindu som ofte sletter data når det lukkes. Trykk <b>Del → Åpne i Safari</b>, og fyll inn der. Deretter kan du legge til på Hjem-skjerm.</p></div>
 <div class="card"><h3>Kom i gang</h3>
 <label>Navn gravid</label><input id="nameA" placeholder="Fornavn"/>
@@ -1385,7 +1436,12 @@ function viewMore(){
  <div class="card"><h3>Kontakter</h3>
  <textarea id="contacts" placeholder="Jordmor, føde, helsestasjon, barnefar/medmor, den som passer dyr">${esc(state.contacts)}</textarea>
  <div class="row" style="margin-top:8px"><button class="btn2" id="savecon">Lagre kontakter</button></div></div>
- <div class="card"><h3>Data</h3><div class="row"><button class="btn2" id="exp">Eksporter JSON</button><button class="btn" id="pdf">Lagre PDF</button><button class="btn2" id="imp">Importer</button>
+ <div class="card"><h3>Overfør til Hjem-skjerm</h3>
+<p class="tiny">På iPhone har Safari og Hjem-skjerm-appen <b>hvert sitt lager</b>. Hvis du fylte ut i Safari, lag en lenke og åpne den <b>fra Hjem-skjerm-appen</b> én gang.</p>
+<button class="btn" id="mkTransfer" type="button">Lag overføringslenke</button>
+<p class="tiny" id="transferOut" style="margin-top:8px;word-break:break-all"></p>
+</div>
+<div class="card"><h3>Data</h3><div class="row"><button class="btn2" id="exp">Eksporter JSON</button><button class="btn" id="pdf">Lagre PDF</button><button class="btn2" id="imp">Importer</button>
  <input id="file" type="file" accept="application/json" class="hidden"/></div>
  <p class="tiny">Send JSON til den andre telefonen for manuell synk.</p></div>
  <p class="warn">Appen erstatter ikke jordmor, fastlege, fødeavdeling eller Helsenorge. Helsenorge og Gravidhjelpen er kildene — appen er et kart, ikke behandleren.</p>`
@@ -1393,6 +1449,20 @@ function viewMore(){
 
 let mood=3, symp=new Set();
 function bind(){
+
+ const sh=document.getElementById("standaloneHint"); if(sh){sh.style.display=isStandaloneApp()?"block":"none"}
+ 
+ const mt=document.getElementById("mkTransfer");
+ if(mt) mt.onclick=async()=>{
+  if(!state.setup||!state.due||!state.nameA){alert("Fullfør oppsett med navn og termin først.");return}
+  const url=buildTransferUrl();
+  const out=document.getElementById("transferOut");
+  if(out) out.textContent=url;
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(url); alert("Lenke kopiert. Åpne Hjem-skjerm-appen og lim inn lenken i Safari-adressesfeltet inne i appen — eller Del lenken til deg selv og åpne med Hjem-skjerm-appen.");}
+    else {alert("Kopier lenken som vises under knappen. Åpne den i Hjem-skjerm-appen.");}
+  }catch(e){alert("Kopier lenken som vises under knappen.");}
+ };
 
  const sw=document.getElementById("storageWarn");
  if(sw){sw.style.display=(!storageAvailable()||isEmbeddedBrowser())?"block":"none"}
@@ -1419,6 +1489,11 @@ function bind(){
     }
   }catch(e){}
   setTab("hjem");
+  if(!isStandaloneApp()){
+    setTimeout(function(){
+      alert("Lagret i Safari. På iPhone: legg til Hjem-skjerm, åpne ikonet, og bruk Mer → Overfør til Hjem-skjerm hvis navnene mangler der.");
+    }, 200);
+  }
 };
  document.querySelectorAll("#moods button").forEach(b=>b.onclick=()=>{mood=Number(b.dataset.mood);document.querySelectorAll("#moods button").forEach(x=>x.classList.toggle("on",x===b))});
  document.querySelectorAll("#symp button").forEach(b=>b.onclick=()=>{const s=b.dataset.s;if(symp.has(s))symp.delete(s);else symp.add(s);b.style.background=symp.has(s)?"#e7cfd4":""});
